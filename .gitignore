@@ -4,3 +4,4 @@
 *.pyc
 *.whl
 *.tar.gz
+*.todo
