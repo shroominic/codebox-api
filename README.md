@@ -37,6 +37,11 @@ print(result)
 codebox.stop()
 ```
 
+## Where to get your api-key?
+
+CodeBox is currently in early development just write me an email and I send you a key for testing :)
+
+
 ## Contributing
 
 Feel free to contribute to this project.
