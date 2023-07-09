@@ -1,0 +1,6 @@
+.env
+.DS_Store
+.pytest_cache
+*.pyc
+*.whl
+*.tar.gz
