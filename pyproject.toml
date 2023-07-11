@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.3"
+version = "0.0.4"
 description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
 authors = ["Shroominic <pleurae-berets.0u@icloud.com>"]
 readme = "README.md"
@@ -9,6 +9,9 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 python-dotenv = "^1.0.0"
+websockets = "^11.0.3"
+aiohttp = "^3.8.4"
+asyncer = "^0.0.2"
 
 [tool.poetry.extras]
 image_support = ["Pillow"]
