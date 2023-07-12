@@ -9,11 +9,12 @@ class CodeBoxSettings(BaseSettings):
     """
     CodeBox API Config
     """
-    CODEBOX_API_KEY: str = None
-    CODEBOX_BASE_URL: str = "https://codeinterpreterapi.com/api/v1"
-    CODEBOX_VERBOSE: bool = False
+    VERBOSE: bool = False
     
-    OPENAI_API_KEY: str = ""
+    CODEBOX_API_KEY: str | None = None
+    CODEBOX_BASE_URL: str = "https://codeinterpreterapi.com/api/v1"
+    
+    OPENAI_API_KEY: str | None = None
     
 
 settings = CodeBoxSettings()
