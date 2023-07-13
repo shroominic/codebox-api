@@ -1,5 +1,5 @@
 import json
-import requests
+import requests  # type: ignore
 from aiohttp import ClientSession, ClientResponse
 from codeboxapi.config import settings
 
