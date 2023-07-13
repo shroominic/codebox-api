@@ -1,6 +1,7 @@
 import requests
 from codeboxapi import CodeBox
 
+
 with CodeBox() as codebox:
     # download the iris dataset
     csv_bytes = requests.get("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data").content

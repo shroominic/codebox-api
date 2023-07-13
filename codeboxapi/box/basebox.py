@@ -1,10 +1,7 @@
 from uuid import uuid4
 from datetime import datetime
-from codeboxapi import settings
-from asyncer import runnify
 from typing_extensions import Self
 from abc import ABC
-from ..utils import base_request
 from ..schema import (
     CodeBoxStatus, 
     CodeBoxOutput,
