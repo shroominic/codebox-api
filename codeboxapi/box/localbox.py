@@ -86,7 +86,7 @@ class LocalBox(BaseBox):
             f"{self.ws_url}/kernels/{self.kernel['id']}/channels"
         )
         
-        return CodeBoxStatus(status="running")
+        return CodeBoxStatus(status="started")
         
     
     async def astart(self) -> CodeBoxStatus:
@@ -128,7 +128,7 @@ class LocalBox(BaseBox):
             f"{self.ws_url}/kernels/{self.kernel['id']}/channels"
         )
         
-        return CodeBoxStatus(status="running")
+        return CodeBoxStatus(status="started")
     
     def status(self) -> CodeBoxStatus:
         return CodeBoxStatus(
