@@ -1,4 +1,4 @@
-import requests
+import requests  # type: ignore
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:

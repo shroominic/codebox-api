@@ -1,4 +1,4 @@
-import requests
+import requests  # type: ignore
 from codeboxapi import CodeBox
 
 
@@ -39,7 +39,7 @@ with CodeBox() as codebox:
         import base64
         
         try:
-            from PIL import Image
+            from PIL import Image  # type: ignore
         except ImportError:
             print("Please install it with `pip install codeboxapi[image_support]` to display images.")
             exit(1)

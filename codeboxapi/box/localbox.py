@@ -1,7 +1,7 @@
 import os
 import json
 import time
-import requests
+import requests  # type: ignore
 import asyncio
 import aiohttp
 import subprocess
