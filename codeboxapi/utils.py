@@ -70,7 +70,7 @@ async def abase_request(
     body: dict | None = None, 
     files: dict | None = None, 
     content_type: str = "application/json"
-) -> dict | bytes:
+) -> dict:
     request_data = build_request_data(method, endpoint, body, files, content_type)
     response = await session.request(**request_data)
     return await handle_response_async(response)

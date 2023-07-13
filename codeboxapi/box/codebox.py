@@ -51,7 +51,7 @@ class CodeBox(BaseBox):
         method,
         endpoint,
         *args, **kwargs
-    ) -> dict[str, Any] | bytes:
+    ) -> dict[str, Any]:
         self._update()
         return await abase_request(
             method,
@@ -105,7 +105,7 @@ class CodeBox(BaseBox):
                 files={"file": (file_name, content)},
                 content_type=None
             ) 
-        )  # TODO: check if schema fits
+        )
     
     async def aupload(
             self, 
@@ -119,7 +119,7 @@ class CodeBox(BaseBox):
                 files={"file": (file_name, content)},
                 content_type=None
             ) 
-        )  # TODO: check if schema fits
+        )
     
     def download(self, file_name: str) -> CodeBoxFile:
         return CodeBoxFile(
