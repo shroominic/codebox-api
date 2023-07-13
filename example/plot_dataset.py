@@ -8,7 +8,7 @@ with CodeBox() as codebox:
     print("downloaded dataset")
     
     # upload the dataset to the codebox
-    o = codebox.upload_file("iris.csv", csv_bytes)
+    o = codebox.upload("iris.csv", csv_bytes)
 
     # dataset analysis code
     code = """
