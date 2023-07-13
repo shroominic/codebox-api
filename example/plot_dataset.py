@@ -1,5 +1,6 @@
-import requests
+import requests  # type: ignore
 from codeboxapi import CodeBox
+
 
 with CodeBox() as codebox:
     # download the iris dataset
@@ -8,7 +9,7 @@ with CodeBox() as codebox:
     print("downloaded dataset")
     
     # upload the dataset to the codebox
-    o = codebox.upload_file("iris.csv", csv_bytes)
+    o = codebox.upload("iris.csv", csv_bytes)
 
     # dataset analysis code
     code = """
@@ -38,7 +39,7 @@ with CodeBox() as codebox:
         import base64
         
         try:
-            from PIL import Image
+            from PIL import Image  # type: ignore
         except ImportError:
             print("Please install it with `pip install codeboxapi[image_support]` to display images.")
             exit(1)

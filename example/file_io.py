@@ -1,13 +1,14 @@
-import requests
+import requests  # type: ignore
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:
     # upload dataset csv
     csv_bytes = requests.get("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data").content
-    codebox.upload_file("iris.csv", csv_bytes)
+    codebox.upload("iris.csv", csv_bytes)
 
     # install openpyxl for excel conversion
-    codebox.install_package("openpyxl")
+    codebox.install("pandas")
+    codebox.install("openpyxl")
     
     # convert dataset csv to excel
     output = codebox.run("""
@@ -26,9 +27,9 @@ with CodeBox() as codebox:
         print("Error: ", output.content)
     
     else:
-        files = codebox.get_available_files()
+        files = codebox.list_files()
         print("Available files: ", files)
         
-        file = files[0]
-        content = codebox.download_file(file)
+        file = files[0].name
+        content = codebox.download(file)
         print("Content: ", content)
