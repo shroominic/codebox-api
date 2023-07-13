@@ -1,7 +1,7 @@
 from typing import Any
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
-from ..utils import base_request
+from ..utils import base_request, abase_request
 from ..schema import (
     CodeBoxStatus, 
     CodeBoxOutput,
@@ -51,8 +51,8 @@ class CodeBox(BaseBox):
         method,
         endpoint,
         *args, **kwargs
-    ) -> dict[str, Any]:
-        self._update() # TODO maybe async update?
+    ) -> dict[str, Any] | bytes:
+        self._update()
         return await abase_request(
             method,
             f"/codebox/{self.id}" + endpoint,
@@ -66,7 +66,15 @@ class CodeBox(BaseBox):
                 endpoint="/",
             )
         )
-        
+    
+    async def astatus(self):
+        return CodeBoxStatus(
+            ** await self.acodebox_request(
+                method="GET",
+                endpoint="/",
+            )
+        )
+    
     def run(self, code: str):
         return CodeBoxOutput(
             ** self.codebox_request(
@@ -76,6 +84,15 @@ class CodeBox(BaseBox):
             )
         )
         
+    async def arun(self, code: str):
+        return CodeBoxOutput(
+            ** await self.acodebox_request(
+                method="POST",
+                endpoint=f"/run",
+                body={"code": code},
+            )
+        )
+
     def upload(
             self, 
             file_name: str, 
@@ -90,9 +107,33 @@ class CodeBox(BaseBox):
             ) 
         )  # TODO: check if schema fits
     
+    async def aupload(
+            self, 
+            file_name: str, 
+            content: bytes
+        ) -> CodeBoxStatus:
+        return CodeBoxStatus(
+            ** await self.acodebox_request(
+                method="POST",
+                endpoint="/upload",
+                files={"file": (file_name, content)},
+                content_type=None
+            ) 
+        )  # TODO: check if schema fits
+    
     def download(self, file_name: str) -> CodeBoxFile:
         return CodeBoxFile(
             ** self.codebox_request(
+                method="GET",
+                endpoint="/download",
+                body={"file_name": file_name},
+                content_type=None,
+            )
+        )
+        
+    async def adownload(self, file_name: str) -> CodeBoxFile:
+        return CodeBoxFile(
+            ** await self.acodebox_request(
                 method="GET",
                 endpoint="/download",
                 body={"file_name": file_name},
@@ -111,11 +152,32 @@ class CodeBox(BaseBox):
             )
         )
     
+    async def ainstall(self, package_name: str) -> CodeBoxStatus:
+        return CodeBoxStatus(
+            ** await self.acodebox_request(
+                method="POST",
+                endpoint="/install",
+                body={
+                    "package_name": package_name,
+                },
+            )
+        )
+    
     def list_files(self) -> list[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None) 
             for file_name in (
                 self.codebox_request(
+                    method="GET",
+                    endpoint="/files",
+                ))["files"]
+            ]
+        
+    async def alist_files(self) -> list[CodeBoxFile]:
+        return [
+            CodeBoxFile(name=file_name, content=None) 
+            for file_name in (
+                await self.acodebox_request(
                     method="GET",
                     endpoint="/files",
                 ))["files"]
@@ -128,3 +190,12 @@ class CodeBox(BaseBox):
                 endpoint="/stop",
             )
         )
+
+    async def astop(self) -> CodeBoxStatus:
+        return CodeBoxStatus(
+            ** await self.acodebox_request(
+                method="POST",
+                endpoint="/stop",
+            )
+        )
+    
