@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.4"
+version = "0.0.5"
 description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
 authors = ["Shroominic <pleurae-berets.0u@icloud.com>"]
 readme = "README.md"
@@ -11,17 +11,14 @@ python = "^3.9"
 python-dotenv = "^1.0.0"
 websockets = "^11.0.3"
 aiohttp = "^3.8.4"
-asyncer = "^0.0.2"
-jupyter = "^1.0.0"  # TODO: make optional
-jupyter-kernel-gateway = "^2.5.2"
 requests = "^2.31.0"
-websocket = "^0.2.1"
 
 [tool.poetry.extras]
 image_support = ["Pillow"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.0"
+jupyter-kernel-gateway = "^2.5.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
