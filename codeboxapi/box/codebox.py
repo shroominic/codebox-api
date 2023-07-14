@@ -53,7 +53,10 @@ class CodeBox(BaseBox):
         *args, **kwargs
     ) -> dict[str, Any]:
         self._update()
+        if self.session is None:
+            raise RuntimeError("CodeBox session not started")
         return await abase_request(
+            self.session,
             method,
             f"/codebox/{self.id}" + endpoint,
             *args, **kwargs
@@ -192,6 +195,10 @@ class CodeBox(BaseBox):
         )
 
     async def astop(self) -> CodeBoxStatus:
+        if self.session:
+            await self.session.close()
+            self.session = None
+        
         return CodeBoxStatus(
             ** await self.acodebox_request(
                 method="POST",
