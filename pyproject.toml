@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.5"
+version = "0.0.6"
 description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
 authors = ["Shroominic <pleurae-berets.0u@icloud.com>"]
 readme = "README.md"
