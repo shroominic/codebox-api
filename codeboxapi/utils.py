@@ -1,6 +1,6 @@
 import json
 import requests  # type: ignore
-from aiohttp import ClientSession, ClientResponse
+from aiohttp import ClientSession, ClientResponse, FormData
 from codeboxapi.config import settings
 
 
@@ -34,12 +34,12 @@ def handle_response(response: requests.Response):
     return handler(response)
 
 
-async def handle_response_async(response: ClientResponse):
-    async def json_handler(r: ClientResponse):
+async def handle_response_async(response: ClientResponse) -> dict:
+    async def json_handler(r: ClientResponse) -> dict:
         return json.loads(await r.text())
         
-    async def default_handler(r: ClientResponse):
-        return await r.text()
+    async def default_handler(r: ClientResponse) -> dict:
+        return {"text": await r.text()}  # TODO: fix schema
     
     handlers = {
         "application/json": json_handler,
@@ -72,7 +72,17 @@ async def abase_request(
     content_type: str = "application/json"
 ) -> dict:
     request_data = build_request_data(method, endpoint, body, files, content_type)
-    response = await session.request(**request_data)
+    if files is not None:
+        data = FormData()
+        for key, file in files.items():
+            data.add_field(key, file)
+        request_data.pop("files")
+        request_data.pop("json")
+        request_data["data"] = data
+        response = await session.request(method, request_data["url"], data=data)
+    else:
+        request_data.pop("files")
+        response = await session.request(**request_data)
     return await handle_response_async(response)
 
 
