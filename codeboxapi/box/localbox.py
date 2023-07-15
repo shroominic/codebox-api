@@ -49,6 +49,7 @@ class LocalBox(BaseBox):
     
     def start(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
+        self._check_port()
         if settings.VERBOSE:
             print("Starting kernel...")
             out = None
@@ -87,10 +88,21 @@ class LocalBox(BaseBox):
         )
         
         return CodeBoxStatus(status="started")
-        
+    
+    def _check_port(self) -> None:
+        try:
+            response = requests.get(f"http://localhost:{self.port}")
+        except requests.exceptions.ConnectionError:
+            pass
+        else:
+            if response.status_code == 200:
+                self.port += 1
+                self._check_port()
     
     async def astart(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
+        self.session = aiohttp.ClientSession()
+        await self._acheck_port()
         if settings.VERBOSE:
             print("Starting kernel...")
             out = None
@@ -105,7 +117,6 @@ class LocalBox(BaseBox):
             stderr=out,
             cwd=".codebox"
         )
-        self.session = aiohttp.ClientSession()
         while True:
             try:
                 response = await self.session.get(self.kernel_url)
@@ -130,6 +141,20 @@ class LocalBox(BaseBox):
         
         return CodeBoxStatus(status="started")
     
+    async def _acheck_port(self) -> None:
+        try:
+            if self.session is None:
+                self.session = aiohttp.ClientSession()
+            response = await self.session.get(f"http://localhost:{self.port}")
+        except aiohttp.ClientConnectorError:
+            pass
+        except aiohttp.ServerDisconnectedError:
+            pass
+        else:
+            if response.status == 200:
+                self.port += 1
+                await self._acheck_port()
+            
     def status(self) -> CodeBoxStatus:
         return CodeBoxStatus(
             status = "running" 
