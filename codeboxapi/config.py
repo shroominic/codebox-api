@@ -1,9 +1,10 @@
+import os
 from typing import Optional
 from pydantic import BaseSettings
 from dotenv import load_dotenv
 
 # .env file
-load_dotenv()
+load_dotenv("./.env")
 
 
 class CodeBoxSettings(BaseSettings):
