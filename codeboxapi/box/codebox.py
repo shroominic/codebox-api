@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
 from ..utils import base_request, abase_request
@@ -24,7 +24,7 @@ class CodeBox(BaseBox):
     
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.session: ClientSession | None = None
+        self.session: Optional[ClientSession] = None
     
     def start(self) -> CodeBoxStatus:
         return self.status()

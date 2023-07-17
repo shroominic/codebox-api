@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 import subprocess
 from uuid import uuid4
+from typing import Optional, Union
 from typing_extensions import Self
 from websockets.exceptions import ConnectionClosedError
 from websockets.client import WebSocketClientProtocol, connect as ws_connect
@@ -26,7 +27,7 @@ class LocalBox(BaseBox):
     In case you don't put an api_key, 
     this is the default CodeBox.
     """
-    _instance: Self | None = None
+    _instance: Optional[Self] = None
     
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -42,10 +43,10 @@ class LocalBox(BaseBox):
     def __init__(self, port: int = 8888) -> None:
         super().__init__()
         self.port = port
-        self.kernel: dict | None = None
-        self.ws: WebSocketClientProtocol | ClientConnection | None = None
-        self.subprocess: asyncio.subprocess.Process | subprocess.Popen | None = None
-        self.session: aiohttp.ClientSession | None = None
+        self.kernel: Optional[dict] = None
+        self.ws: Union[WebSocketClientProtocol, ClientConnection, None] = None
+        self.subprocess: Union[asyncio.subprocess.Process, subprocess.Popen, None] = None
+        self.session: Optional[aiohttp.ClientSession] = None
     
     def start(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
