@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -24,7 +25,7 @@ class CodeBoxOutput(BaseModel):
 
 class CodeBoxFile(BaseModel):
     name: str
-    content: bytes | None
+    content: Optional[bytes] = None
     
     def __str__(self):
         return self.name

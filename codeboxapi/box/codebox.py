@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
 from ..utils import base_request, abase_request
@@ -24,7 +24,7 @@ class CodeBox(BaseBox):
     
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.session: ClientSession | None = None
+        self.session: Optional[ClientSession] = None
     
     def start(self) -> CodeBoxStatus:
         return self.status()
@@ -53,7 +53,10 @@ class CodeBox(BaseBox):
         *args, **kwargs
     ) -> dict[str, Any]:
         self._update()
+        if self.session is None:
+            raise RuntimeError("CodeBox session not started")
         return await abase_request(
+            self.session,
             method,
             f"/codebox/{self.id}" + endpoint,
             *args, **kwargs
@@ -192,6 +195,10 @@ class CodeBox(BaseBox):
         )
 
     async def astop(self) -> CodeBoxStatus:
+        if self.session:
+            await self.session.close()
+            self.session = None
+        
         return CodeBoxStatus(
             ** await self.acodebox_request(
                 method="POST",
