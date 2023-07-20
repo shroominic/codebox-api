@@ -11,6 +11,9 @@ async def main():
         
         # upload the dataset to the codebox
         o = await codebox.aupload("iris.csv", csv_bytes)
+        
+        await codebox.ainstall("matplotlib")
+        await codebox.ainstall("pandas")
 
         # dataset analysis code
         code = """
