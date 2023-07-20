@@ -1,4 +1,5 @@
 from typing import Any, Optional
+import os
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
 from ..utils import base_request, abase_request
@@ -78,7 +79,17 @@ class CodeBox(BaseBox):
             )
         )
     
-    def run(self, code: str):
+    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None):
+        if not code and not file_path:
+            raise ValueError("Code or file_path must be specified!")
+        
+        if code and file_path:
+            raise ValueError("Can only specify code or the file to read_from!")
+        
+        if file_path:
+            with open(file_path, 'r') as f:
+                code = f.read()
+
         return CodeBoxOutput(
             ** self.codebox_request(
                 method="POST",
@@ -87,7 +98,17 @@ class CodeBox(BaseBox):
             )
         )
         
-    async def arun(self, code: str):
+    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None):
+        if not code and not file_path:
+            raise ValueError("Code or file_path must be specified!")
+        
+        if code and file_path:
+            raise ValueError("Can only specify code or the file to read_from!")
+        
+        if file_path:
+            with open(file_path, 'r') as f:
+                code = await f.read()
+
         return CodeBoxOutput(
             ** await self.acodebox_request(
                 method="POST",
