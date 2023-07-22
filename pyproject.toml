@@ -13,8 +13,7 @@ websockets = "^11.0.3"
 aiohttp = "^3.8.4"
 requests = "^2.27.1"
 jupyter-kernel-gateway = "^2.5.2"
-pydantic = "^2.0.3"
-pydantic-settings = "^2.0.2"
+pydantic = "^1"
 
 [tool.poetry.extras]
 image_support = ["Pillow"]
