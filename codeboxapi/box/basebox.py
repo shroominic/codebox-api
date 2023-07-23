@@ -1,4 +1,3 @@
-from uuid import uuid4
 from datetime import datetime
 from typing_extensions import Self
 from abc import ABC, abstractmethod
@@ -15,7 +14,7 @@ class BaseBox(ABC):
     """
     
     def __init__(self) -> None:
-        self.id = uuid4().int
+        self.id: int | None = None
         self.last_interaction = datetime.now()
 
     def _update(self) -> None:
