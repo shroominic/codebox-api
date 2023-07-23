@@ -26,13 +26,6 @@ class CodeBox(BaseBox):
         super().__init__(*args, **kwargs)
         self.session: Optional[ClientSession] = None
     
-    def start(self) -> CodeBoxStatus:
-        return self.status()
-    
-    async def astart(self) -> CodeBoxStatus:
-        self.session = ClientSession()
-        return await self.astatus()
-    
     def codebox_request(
         self, 
         method, 
@@ -61,6 +54,22 @@ class CodeBox(BaseBox):
             f"/codebox/{self.id}" + endpoint,
             *args, **kwargs
         )
+    
+    def start(self) -> CodeBoxStatus:
+        self.id = base_request(
+            method="GET",
+            endpoint="/codebox/start",
+        )["id"]
+        return CodeBoxStatus(status="started")
+    
+    async def astart(self) -> CodeBoxStatus:
+        self.session = ClientSession()
+        self.id = (await abase_request(
+            self.session,
+            method="GET",
+            endpoint="/codebox/start",
+        ))["id"]
+        return CodeBoxStatus(status="started")
     
     def status(self):
         return CodeBoxStatus(
