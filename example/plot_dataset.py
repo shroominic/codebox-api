@@ -41,7 +41,7 @@ with CodeBox() as codebox:
         try:
             from PIL import Image  # type: ignore
         except ImportError:
-            print("Please install it with `pip install codeboxapi[image_support]` to display images.")
+            print('Please install it with `pip install "codeboxapi[image_support]"` to display images.')
             exit(1)
         
         # Decode the base64 string into bytes
