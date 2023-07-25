@@ -20,5 +20,4 @@ __all__ = [
     "CodeBox", 
     "set_api_key", 
     "settings",
-    "aiosession"
 ]
