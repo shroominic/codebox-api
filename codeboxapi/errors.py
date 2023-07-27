@@ -1,3 +1,4 @@
+# TODO: implement error class to handle errors from codebox
 
 class CodeBoxError(Exception):
     def __init__(
