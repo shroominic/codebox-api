@@ -173,7 +173,17 @@ class LocalBox(BaseBox):
                 else "stopped"
         )
     
-    def run(self, code: str, retry=3) -> CodeBoxOutput:
+    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+        if not code and not file_path:
+            raise ValueError("Code or file_path must be specified!")
+        
+        if code and file_path:
+            raise ValueError("Can only specify code or the file to read_from!")
+        
+        if file_path:
+            with open(file_path, 'r') as f:
+                code = f.read()
+
         # run code in jupyter kernel
         if retry <= 0: 
             raise RuntimeError("Could not connect to kernel")
@@ -215,7 +225,7 @@ class LocalBox(BaseBox):
                 received_msg = json.loads(self.ws.recv())
             except ConnectionClosedError:
                 self.start()
-                return self.run(code, retry-1)
+                return self.run(code, file_path, retry-1)
             
             if (
                 received_msg["header"]["msg_type"] == "stream"
@@ -271,7 +281,17 @@ class LocalBox(BaseBox):
                     content=error
                 )
     
-    async def arun(self, code: str, retry=3) -> CodeBoxOutput:
+    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+        if not code and not file_path:
+            raise ValueError("Code or file_path must be specified!")
+        
+        if code and file_path:
+            raise ValueError("Can only specify code or the file to read_from!")
+        
+        if file_path:
+            with open(file_path, 'r') as f:
+                code = await f.read()
+
         # run code in jupyter kernel
         if retry <= 0: 
             raise RuntimeError("Could not connect to kernel")
@@ -313,7 +333,7 @@ class LocalBox(BaseBox):
                 received_msg = json.loads(await self.ws.recv())
             except ConnectionClosedError:
                 await self.astart()
-                return await self.arun(code, retry-1)
+                return await self.arun(code, file_path, retry-1)
             
             if (
                 received_msg["header"]["msg_type"] == "stream"

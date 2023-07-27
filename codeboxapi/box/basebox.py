@@ -1,3 +1,6 @@
+from typing import Optional
+import os
+from uuid import uuid4
 from datetime import datetime
 from typing_extensions import Self
 from abc import ABC, abstractmethod
@@ -33,10 +36,10 @@ class BaseBox(ABC):
     async def astatus(self) -> CodeBoxStatus: ...
     
     @abstractmethod
-    def run(self, code: str) -> CodeBoxOutput: ...
+    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
     
     @abstractmethod
-    async def arun(self, code: str) -> CodeBoxOutput: ...
+    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
     
     @abstractmethod
     def upload(self, file_name: str, content: bytes) -> CodeBoxStatus: ...
