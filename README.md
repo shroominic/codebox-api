@@ -39,7 +39,12 @@ codebox.stop()
 
 ## Where to get your api-key?
 
-CodeBox is currently in early development just write me an email and I send you a key for testing :)
+CodeBox is currently in early development so I created a stripe payment link as login system:
+https://pay.codeboxapi.com/b/00g3e6dZX2fTg0gaEE
+As BetaTester you get 70% with the code `BETA`. 
+Bear in mind, we don't have many automations set up right now, 
+so you'll need to write an [email](mailto:contact@codeboxapi.com) for things like refunds, 
+sub cancellations, or upgrades.
 
 
 ## Contributing
