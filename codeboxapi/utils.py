@@ -1,7 +1,9 @@
 import json
 import requests  # type: ignore
+from io import BytesIO
 from typing import Optional
 from aiohttp import ClientSession, ClientResponse, FormData
+from aiohttp.payload import BytesIOPayload
 from codeboxapi.config import settings
 
 
@@ -10,13 +12,11 @@ def build_request_data(
     endpoint: str, 
     body: Optional[dict] = None,
     files: Optional[dict] = None, 
-    content_type: str = "application/json"
 ) -> dict:
     return {
         "method": method,
         "url": settings.CODEBOX_BASE_URL + endpoint,
         "headers": {
-            "Content-Type": content_type,
             "Authorization": f"Bearer {settings.CODEBOX_API_KEY}",
         },
         "json": body,
@@ -57,9 +57,8 @@ def base_request(
     endpoint: str, 
     body: Optional[dict] = None,
     files: Optional[dict] = None, 
-    content_type: str = "application/json"
 ) -> dict:
-    request_data = build_request_data(method, endpoint, body, files, content_type)
+    request_data = build_request_data(method, endpoint, body, files)
     response = requests.request(**request_data)
     return handle_response(response)
 
@@ -70,17 +69,18 @@ async def abase_request(
     endpoint: str, 
     body: Optional[dict] = None,
     files: Optional[dict] = None,
-    content_type: str = "application/json"
 ) -> dict:
-    request_data = build_request_data(method, endpoint, body, files, content_type)
+    request_data = build_request_data(method, endpoint, body, files)
     if files is not None:
         data = FormData()
-        for key, file in files.items():
-            data.add_field(key, file)
+        for key, file_tuple in files.items():
+            filename, fileobject = file_tuple[:2]  # Get the filename and fileobject from the tuple
+            payload = BytesIOPayload(BytesIO(fileobject))
+            data.add_field(key, payload, filename=filename)  # Use the filename from the tuple
         request_data.pop("files")
         request_data.pop("json")
         request_data["data"] = data
-        response = await session.request(method, request_data["url"], data=data)
+        response = await session.request(**request_data)
     else:
         request_data.pop("files")
         response = await session.request(**request_data)
