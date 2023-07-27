@@ -1,6 +1,6 @@
-from pathlib import Path
 import requests  # type: ignore
-from codeboxapi import FILES_DIR, CodeBox, 
+from codeboxapi import CodeBox
+from pathlib import Path
 
 
 with CodeBox() as codebox:
@@ -13,9 +13,9 @@ with CodeBox() as codebox:
     o = codebox.upload("iris.csv", csv_bytes)
 
     # dataset analysis code
-    file_path = FILES_DIR / "async_dataset_code.py"
+    file_path = Path("example/assets/dataset_code.py")
     # or 
-    # file_path = Path(__file__).parent / "async_dataset_code.txt"
+    # file_path = Path("example/assets/dataset_code.py")
 
     # run the code
     output = codebox.run(file_path=file_path)
