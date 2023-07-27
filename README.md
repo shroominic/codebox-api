@@ -15,9 +15,10 @@ pip install codeboxapi
 ## Usage
 
 ```python
-import codeboxapi as cb
+from codeboxapi import CodeBox, set_api_key
 
-cb.set_api_key("your-api-key")
+
+set_api_key("sk-************************")
 # or put your api key inside the .env file
 # CODEBOX_API_KEY=your-api-key
 
@@ -26,7 +27,7 @@ codebox = CodeBox()
 codebox.start()
 
 # check if it's running
-print(codebox.status() == "running")
+print(str(codebox.status()) == "running")
 
 # run some code
 result = codebox.run("print('Hello, World!')")
