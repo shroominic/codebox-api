@@ -1,5 +1,5 @@
-from typing import Any, Optional
 import os
+from typing import Any, Optional
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
 from codeboxapi.utils import base_request, abase_request
@@ -114,9 +114,8 @@ class CodeBox(BaseBox):
         if code and file_path:
             raise ValueError("Can only specify code or the file to read_from!")
         
-        if file_path:
-            with open(file_path, 'r') as f:
-                code = await f.read()
+        if file_path:  # TODO: Implement this
+            raise NotImplementedError("Reading from FilePath is not supported in async mode yet!")
 
         return CodeBoxOutput(
             ** await self.acodebox_request(
@@ -136,7 +135,6 @@ class CodeBox(BaseBox):
                 method="POST",
                 endpoint="/upload",
                 files={"file": (file_name, content)},
-                content_type=None
             ) 
         )
     
@@ -150,7 +148,6 @@ class CodeBox(BaseBox):
                 method="POST",
                 endpoint="/upload",
                 files={"file": (file_name, content)},
-                content_type=None
             ) 
         )
     
@@ -160,7 +157,6 @@ class CodeBox(BaseBox):
                 method="GET",
                 endpoint="/download",
                 body={"file_name": file_name},
-                content_type=None,
             )
         )
         
@@ -170,7 +166,6 @@ class CodeBox(BaseBox):
                 method="GET",
                 endpoint="/download",
                 body={"file_name": file_name},
-                content_type=None,
             )
         )
         
