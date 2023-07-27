@@ -1,8 +1,8 @@
 from typing import Any, Optional
 from codeboxapi import settings
 from codeboxapi.box import BaseBox
-from ..utils import base_request, abase_request
-from ..schema import (
+from codeboxapi.utils import base_request, abase_request
+from codeboxapi.schema import (
     CodeBoxStatus, 
     CodeBoxOutput,
     CodeBoxFile
