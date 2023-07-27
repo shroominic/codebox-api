@@ -1,10 +1,9 @@
-from typing import Optional
 import os
-from uuid import uuid4
+from typing import Optional
 from datetime import datetime
 from typing_extensions import Self
 from abc import ABC, abstractmethod
-from ..schema import (
+from codeboxapi.schema import (
     CodeBoxStatus, 
     CodeBoxOutput,
     CodeBoxFile,
