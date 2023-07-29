@@ -88,7 +88,7 @@ class CodeBox(BaseBox):
             )
         )
     
-    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None):
+    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None):
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
         
@@ -107,7 +107,7 @@ class CodeBox(BaseBox):
             )
         )
         
-    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None):
+    async def arun(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None):
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
         

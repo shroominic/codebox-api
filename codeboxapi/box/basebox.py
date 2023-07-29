@@ -16,7 +16,7 @@ class BaseBox(ABC):
     """
     
     def __init__(self) -> None:
-        self.id: int | None = None
+        self.id: Optional[int] = None
         self.last_interaction = datetime.now()
 
     def _update(self) -> None:
@@ -35,10 +35,10 @@ class BaseBox(ABC):
     async def astatus(self) -> CodeBoxStatus: ...
     
     @abstractmethod
-    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
+    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
     
     @abstractmethod
-    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
+    async def arun(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
     
     @abstractmethod
     def upload(self, file_name: str, content: bytes) -> CodeBoxStatus: ...

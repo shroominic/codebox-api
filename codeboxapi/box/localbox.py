@@ -180,7 +180,7 @@ class LocalBox(BaseBox):
                 else "stopped"
         )
     
-    def run(self, code: str | None = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
         
@@ -288,7 +288,7 @@ class LocalBox(BaseBox):
                     content=error
                 )
     
-    async def arun(self, code: str | None = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+    async def arun(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
         
