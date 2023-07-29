@@ -220,14 +220,13 @@ class CodeBox(BaseBox):
         )
 
     async def astop(self) -> CodeBoxStatus:
-        if self.session:
-            await self.session.close()
-            self.session = None
-        
-        return CodeBoxStatus(
+        status = CodeBoxStatus(
             ** await self.acodebox_request(
                 method="POST",
                 endpoint="/stop",
             )
         )
-    
+        if self.session:
+            await self.session.close()
+            self.session = None
+        return status
