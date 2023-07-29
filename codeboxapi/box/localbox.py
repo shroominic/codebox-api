@@ -56,17 +56,24 @@ class LocalBox(BaseBox):
             out = None
         else:
             out = subprocess.PIPE
-        self.subprocess = subprocess.Popen(
-            [
-                "jupyter",
-                "kernelgateway",
-                "--KernelGatewayApp.ip='0.0.0.0'",
-                f"--KernelGatewayApp.port={self.port}",
-            ],
-            stdout=out,
-            stderr=out,
-            cwd=".codebox",
-        )
+        try:
+            self.subprocess = subprocess.Popen(
+                [
+                    "jupyter",
+                    "kernelgateway",
+                    "--KernelGatewayApp.ip='0.0.0.0'",
+                    f"--KernelGatewayApp.port={self.port}",
+                ],
+                stdout=out,
+                stderr=out,
+                cwd=".codebox",
+            )
+        except FileNotFoundError:
+            raise ModuleNotFoundError(
+                "Jupyter Kernel Gateway not found, please install it with:\n"
+                "`pip install jupyter_kernel_gateway`\n"
+                "to use the LocalBox."
+            )
         while True:
             try:
                 response = requests.get(self.kernel_url)
