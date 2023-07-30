@@ -27,6 +27,7 @@ def build_request_data(
 def handle_response(response: requests.Response):
     handlers = {
         "application/json": lambda r: json.loads(r.content.decode()),
+        "application/octet-stream": lambda r: {"content": BytesIO(r.content).read(), "name": r.headers["Content-Disposition"].split("=")[1]}
         # Add other content type handlers here
     }
     handler = handlers.get(response.headers['Content-Type'].split(';')[0], lambda r: r.content.decode())
@@ -39,11 +40,15 @@ async def handle_response_async(response: ClientResponse) -> dict:
     async def json_handler(r: ClientResponse) -> dict:
         return json.loads(await r.text())
         
+    async def file_handler(r: ClientResponse) -> dict:
+        return {"content": await r.read(), "name": r.headers["Content-Disposition"].split("=")[1]}
+    
     async def default_handler(r: ClientResponse) -> dict:
-        return {"text": await r.text()}  # TODO: fix schema
+        return {"content": await r.text()}
     
     handlers = {
         "application/json": json_handler,
+        "application/octet-stream": file_handler,
         # Add other content type handlers here
     }
     handler = handlers.get(response.headers['Content-Type'].split(';')[0], default_handler)
