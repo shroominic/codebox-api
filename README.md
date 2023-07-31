@@ -15,38 +15,35 @@ pip install codeboxapi
 ## Usage
 
 ```python
-from codeboxapi import CodeBox, set_api_key
+# Make sure to set the api-key as environment variable:
+# CODEBOX_API_KEY=sk-*******************************
+
+from codeboxapi import CodeBox
 
 
-set_api_key("sk-************************")
-# or put your api key inside the .env file
-# CODEBOX_API_KEY=your-api-key
+# startup and automatically shutdown a new codebox
+with CodeBox() as codebox:
+    # check if it's running
+    print(codebox.status())
 
-# create and startup
-codebox = CodeBox()
-codebox.start()
+    # run some code
+    codebox.run("a = 'Hello'")
+    codebox.run("b = 'World!'")
+    codebox.run("result = a + ', ' + b")
+    result = codebox.run("print(result)")
 
-# check if it's running
-print(str(codebox.status()) == "running")
+    print(result)
+    # Hello, World!
 
-# run some code
-result = codebox.run("print('Hello, World!')")
-
-# print the result
-print(result)
-
-codebox.stop()
 ```
 
 ## Where to get your api-key?
 
-CodeBox is currently in early development so I created a stripe payment link as login system:
-https://pay.codeboxapi.com/b/00g3e6dZX2fTg0gaEE
-As BetaTester you get 70% with the code `BETA`. 
-Bear in mind, we don't have many automations set up right now, 
-so you'll need to write an [email](mailto:contact@codeboxapi.com) for things like refunds, 
+CodeBox is currently in early development so I created a stripe [payment link as login](https://pay.codeboxapi.com/b/00g3e6dZX2fTg0gaEE) system.
+As BetaTester you get 70% with the code `BETA`.
+Bear in mind, we don't have many automations set up right now,
+so you'll need to write an [email](mailto:contact@codeboxapi.com) for things like refunds,
 sub cancellations, or upgrades.
-
 
 ## Contributing
 
@@ -59,4 +56,4 @@ You can open an issue or submit a pull request.
 
 ## Contact
 
-You can contact me at [pleurae-berets.0u@icloud.com](mailto:pleurae-berets.0u@icloud.com)
+You can contact me at [contact@codeboxapi.com](mailto:contact@codeboxapi.com)
