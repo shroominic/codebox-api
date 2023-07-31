@@ -20,16 +20,15 @@ with CodeBox() as codebox:
     "iris.xlsx"
     """)
 
+    # check output type
     if output.type == "image/png":
         print("This should not happen")
-    
     elif output.type == "error":
         print("Error: ", output.content)
-    
     else:
-        files = codebox.list_files()
-        print("Available files: ", files)
-        
-        file = files[0].name
-        content = codebox.download(file)
-        print("Content: ", content)
+        # all files inside the codebox
+        for file in codebox.list_files():
+            print("File: ", file.name)
+            print("Content is None: ", file.content is None)
+            content = codebox.download(file.name)
+            print("Content: ", content)

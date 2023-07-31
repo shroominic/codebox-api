@@ -1,4 +1,4 @@
-import requests  # type: ignore
+import requests
 from codeboxapi import CodeBox
 from pathlib import Path
 
@@ -13,9 +13,7 @@ with CodeBox() as codebox:
     o = codebox.upload("iris.csv", csv_bytes)
 
     # dataset analysis code
-    file_path = Path("example/assets/dataset_code.py")
-    # or 
-    # file_path = Path("example/assets/dataset_code.py")
+    file_path = Path("examples/assets/dataset_code.txt")
 
     # run the code
     output = codebox.run(file_path=file_path)
