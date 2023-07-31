@@ -1,12 +1,13 @@
-import requests
-from codeboxapi import CodeBox
 from pathlib import Path
 
+import requests
+
+from codeboxapi import CodeBox
 
 with CodeBox() as codebox:
     # download the iris dataset
     csv_bytes = requests.get(
-        "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+        "https://archive.ics.uci.edu/" "ml/machine-learning-databases/iris/iris.data"
     ).content
 
     print("downloaded dataset")
@@ -23,14 +24,16 @@ with CodeBox() as codebox:
 
     if output.type == "image/png":
         # Convert the image content into an image
-        from io import BytesIO
         import base64
+        from io import BytesIO
 
         try:
             from PIL import Image  # type: ignore
         except ImportError:
             print(
-                'Please install it with `pip install "codeboxapi[image_support]"` to display images.'
+                "Please install it with "
+                '`pip install "codeboxapi[image_support]"`'
+                " to display images."
             )
             exit(1)
 

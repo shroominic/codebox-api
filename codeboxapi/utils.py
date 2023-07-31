@@ -1,10 +1,15 @@
+""" Utility functions for API requests """
+
 import json
-import requests  # type: ignore
 from io import BytesIO
 from typing import Optional
-from aiohttp import ClientSession, ClientResponse, FormData
+
+import requests
+from aiohttp import ClientResponse, ClientSession, FormData
 from aiohttp.payload import BytesIOPayload
+
 from codeboxapi.config import settings
+from codeboxapi.errors import CodeBoxError
 
 
 def build_request_data(
@@ -13,6 +18,9 @@ def build_request_data(
     body: Optional[dict] = None,
     files: Optional[dict] = None,
 ) -> dict:
+    """
+    Builds a request data dictionary for the requests library.
+    """
     return {
         "method": method,
         "url": settings.CODEBOX_BASE_URL + endpoint,
@@ -25,6 +33,9 @@ def build_request_data(
 
 
 def handle_response(response: requests.Response):
+    """
+    Handles a response from the requests library.
+    """
     handlers = {
         "application/json": lambda r: json.loads(r.content.decode()),
         "application/octet-stream": lambda r: {
@@ -37,11 +48,21 @@ def handle_response(response: requests.Response):
         response.headers["Content-Type"].split(";")[0], lambda r: r.content.decode()
     )
     if response.status_code != 200:
-        raise Exception(f"Error: {response.status_code} {response.content.decode()}")
+        raise CodeBoxError(
+            message=f"Error: {response.status_code}",
+            http_body=response.content,
+            http_status=response.status_code,
+            headers=response.headers,
+            code=response.status_code,
+        )
     return handler(response)
 
 
 async def handle_response_async(response: ClientResponse) -> dict:
+    """
+    Handles a response from the aiohttp library.
+    """
+
     async def json_handler(r: ClientResponse) -> dict:
         return json.loads(await r.text())
 
@@ -63,7 +84,13 @@ async def handle_response_async(response: ClientResponse) -> dict:
         response.headers["Content-Type"].split(";")[0], default_handler
     )
     if response.status != 200:
-        raise Exception(f"Error: {response.status} {await response.text()}")
+        raise CodeBoxError(
+            message=f"Error: {response.status}",
+            http_body=await response.text(),
+            http_status=response.status,
+            headers=response.headers,
+            code=response.status,
+        )
     return await handler(response)
 
 
@@ -73,8 +100,11 @@ def base_request(
     body: Optional[dict] = None,
     files: Optional[dict] = None,
 ) -> dict:
+    """
+    Makes a request to the CodeBox API.
+    """
     request_data = build_request_data(method, endpoint, body, files)
-    response = requests.request(**request_data)
+    response = requests.request(**request_data, timeout=90)
     return handle_response(response)
 
 
@@ -85,6 +115,9 @@ async def abase_request(
     body: Optional[dict] = None,
     files: Optional[dict] = None,
 ) -> dict:
+    """
+    Makes an asynchronous request to the CodeBox API.
+    """
     request_data = build_request_data(method, endpoint, body, files)
     if files is not None:
         data = FormData()
@@ -107,4 +140,7 @@ async def abase_request(
 
 
 def set_api_key(api_key: str) -> None:
+    """
+    Manually set the CODEBOX_API_KEY.
+    """
     settings.CODEBOX_API_KEY = api_key

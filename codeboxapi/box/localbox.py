@@ -1,27 +1,38 @@
-import os
-import json
-import time
-import requests  # type: ignore
+"""
+Local implementation of CodeBox.
+This is useful for testing and development.c
+In case you don't put an api_key,
+this is the default CodeBox.
+"""
+
 import asyncio
-import aiohttp
+import json
+import os
 import subprocess
-from uuid import uuid4
+import time
+from asyncio.subprocess import Process
 from typing import Optional, Union
+from uuid import uuid4
+
+import aiohttp
+import requests
 from typing_extensions import Self
+from websockets.client import WebSocketClientProtocol
+from websockets.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosedError
-from websockets.client import WebSocketClientProtocol, connect as ws_connect
-from websockets.sync.client import connect as ws_connect_sync, ClientConnection
+from websockets.sync.client import ClientConnection
+from websockets.sync.client import connect as ws_connect_sync
+
 from codeboxapi.box import BaseBox
-from codeboxapi.schema import CodeBoxStatus, CodeBoxOutput, CodeBoxFile
+from codeboxapi.schema import CodeBoxFile, CodeBoxOutput, CodeBoxStatus
+
 from ..config import settings
 
 
 class LocalBox(BaseBox):
     """
     LocalBox is a CodeBox implementation that runs code locally.
-    This is useful for testing and development.c
-    In case you don't put an api_key,
-    this is the default CodeBox.
+    This is useful for testing and development.
     """
 
     _instance: Optional[Self] = None
@@ -30,21 +41,21 @@ class LocalBox(BaseBox):
         if not cls._instance:
             cls._instance = super().__new__(cls, *args, **kwargs)
         else:
-            print(
-                "INFO: Using a LocalBox which is not isolated.\n"
-                "      This is only for testing and development.\n"
-                "      Make sure to put an API-Key in production.\n"
-            )
+            if settings.SHOW_INFO:
+                print(
+                    "INFO: Using a LocalBox which is not fully isolated\n"
+                    "      and not scalable across multiple users.\n"
+                    "      Make sure to use a CODEBOX_API_KEY in production.\n"
+                    "      Set envar SHOW_INFO=False to not see this again.\n"
+                )
         return cls._instance
 
-    def __init__(self, port: int = 8888) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.port = port
-        self.kernel: Optional[dict] = None
+        self.port: int = 8888
+        self.kernel_id: Optional[dict] = None
         self.ws: Union[WebSocketClientProtocol, ClientConnection, None] = None
-        self.subprocess: Union[
-            asyncio.subprocess.Process, subprocess.Popen, None
-        ] = None
+        self.jupyter: Union[Process, subprocess.Popen, None] = None
         self.session: Optional[aiohttp.ClientSession] = None
 
     def start(self) -> CodeBoxStatus:
@@ -56,7 +67,7 @@ class LocalBox(BaseBox):
         else:
             out = subprocess.PIPE
         try:
-            self.subprocess = subprocess.Popen(
+            self.jupyter = subprocess.Popen(
                 [
                     "jupyter",
                     "kernelgateway",
@@ -75,7 +86,7 @@ class LocalBox(BaseBox):
             )
         while True:
             try:
-                response = requests.get(self.kernel_url)
+                response = requests.get(self.kernel_url, timeout=90)
                 if response.status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
@@ -85,19 +96,21 @@ class LocalBox(BaseBox):
             time.sleep(1)
 
         response = requests.post(
-            f"{self.kernel_url}/kernels", headers={"Content-Type": "application/json"}
+            f"{self.kernel_url}/kernels",
+            headers={"Content-Type": "application/json"},
+            timeout=90,
         )
-        self.kernel = response.json()
-        if self.kernel is None:
+        self.kernel_id = response.json()["id"]
+        if self.kernel_id is None:
             raise Exception("Could not start kernel")
 
-        self.ws = ws_connect_sync(f"{self.ws_url}/kernels/{self.kernel['id']}/channels")
+        self.ws = ws_connect_sync(f"{self.ws_url}/kernels/{self.kernel_id}/channels")
 
         return CodeBoxStatus(status="started")
 
     def _check_port(self) -> None:
         try:
-            response = requests.get(f"http://localhost:{self.port}")
+            response = requests.get(f"http://localhost:{self.port}", timeout=90)
         except requests.exceptions.ConnectionError:
             pass
         else:
@@ -114,7 +127,7 @@ class LocalBox(BaseBox):
             out = None
         else:
             out = asyncio.subprocess.PIPE
-        self.subprocess = await asyncio.create_subprocess_exec(
+        self.jupyter = await asyncio.create_subprocess_exec(
             "jupyter",
             "kernelgateway",
             "--KernelGatewayApp.ip='0.0.0.0'",
@@ -139,12 +152,10 @@ class LocalBox(BaseBox):
         response = await self.session.post(
             f"{self.kernel_url}/kernels", headers={"Content-Type": "application/json"}
         )
-        self.kernel = await response.json()
-        if self.kernel is None:
+        self.kernel_id = (await response.json())["id"]
+        if self.kernel_id is None:
             raise Exception("Could not start kernel")
-        self.ws = await ws_connect(
-            f"{self.ws_url}/kernels/{self.kernel['id']}/channels"
-        )
+        self.ws = await ws_connect(f"{self.ws_url}/kernels/{self.kernel_id}/channels")
 
         return CodeBoxStatus(status="started")
 
@@ -165,14 +176,15 @@ class LocalBox(BaseBox):
     def status(self) -> CodeBoxStatus:
         return CodeBoxStatus(
             status="running"
-            if self.kernel and requests.get(self.kernel_url).status_code == 200
+            if self.kernel_id
+            and requests.get(self.kernel_url, timeout=90).status_code == 200
             else "stopped"
         )
 
     async def astatus(self) -> CodeBoxStatus:
         return CodeBoxStatus(
             status="running"
-            if self.kernel
+            if self.kernel_id
             and self.session
             and (await self.session.get(self.kernel_url)).status == 200
             else "stopped"
@@ -191,7 +203,7 @@ class LocalBox(BaseBox):
             raise ValueError("Can only specify code or the file to read_from!")
 
         if file_path:
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 code = f.read()
 
         # run code in jupyter kernel
@@ -263,11 +275,15 @@ class LocalBox(BaseBox):
                         type="image/png",
                         content=received_msg["content"]["data"]["image/png"],
                     )
-                elif "text/plain" in received_msg["content"]["data"]:
+                if "text/plain" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
                         type="text",
                         content=received_msg["content"]["data"]["text/plain"],
                     )
+                return CodeBoxOutput(
+                    type="error",
+                    content="Could not parse output",
+                )
             elif (
                 received_msg["header"]["msg_type"] == "status"
                 and received_msg["parent_header"]["msg_id"] == msg_id
@@ -283,26 +299,29 @@ class LocalBox(BaseBox):
                 received_msg["header"]["msg_type"] == "error"
                 and received_msg["parent_header"]["msg_id"] == msg_id
             ):
-                error = f"{received_msg['content']['ename']}: {received_msg['content']['evalue']}"
+                error = (
+                    f"{received_msg['content']['ename']}: "
+                    f"{received_msg['content']['evalue']}"
+                )
                 if settings.VERBOSE:
                     print("Error:\n", error)
                 return CodeBoxOutput(type="error", content=error)
 
+            return CodeBoxOutput(
+                type="error",
+                content="Unknown message",
+            )
+
     async def arun(
         self,
-        code: Optional[str] = None,
+        code: str,
         file_path: Optional[os.PathLike] = None,
         retry=3,
     ) -> CodeBoxOutput:
-        if not code and not file_path:
-            raise ValueError("Code or file_path must be specified!")
-
-        if code and file_path:
-            raise ValueError("Can only specify code or the file to read_from!")
-
         if file_path:
-            with open(file_path, "r") as f:
-                code = await f.read()
+            raise NotImplementedError(
+                "Reading from file is not supported in async mode"
+            )
 
         # run code in jupyter kernel
         if retry <= 0:
@@ -373,7 +392,7 @@ class LocalBox(BaseBox):
                         type="image/png",
                         content=received_msg["content"]["data"]["image/png"],
                     )
-                elif "text/plain" in received_msg["content"]["data"]:
+                if "text/plain" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
                         type="text",
                         content=received_msg["content"]["data"]["text/plain"],
@@ -393,7 +412,10 @@ class LocalBox(BaseBox):
                 received_msg["header"]["msg_type"] == "error"
                 and received_msg["parent_header"]["msg_id"] == msg_id
             ):
-                error = f"{received_msg['content']['ename']}: {received_msg['content']['evalue']}"
+                error = (
+                    f"{received_msg['content']['ename']}: "
+                    f"{received_msg['content']['evalue']}"
+                )
                 if settings.VERBOSE:
                     print("Error:\n", error)
                 return CodeBoxOutput(type="error", content=error)
@@ -436,6 +458,20 @@ class LocalBox(BaseBox):
     async def alist_files(self) -> list[CodeBoxFile]:
         return await asyncio.to_thread(self.list_files)
 
+    def restart(self) -> CodeBoxStatus:
+        if self.jupyter is not None:
+            self.stop()
+        else:
+            self.start()
+        return CodeBoxStatus(status="restarted")
+
+    async def arestart(self) -> CodeBoxStatus:
+        if self.jupyter is not None:
+            await self.astop()
+        else:
+            await self.astart()
+        return CodeBoxStatus(status="restarted")
+
     def stop(self) -> CodeBoxStatus:
         if self.ws is not None:
             try:
@@ -444,10 +480,10 @@ class LocalBox(BaseBox):
                 pass
             self.ws = None
 
-        if self.subprocess is not None:
-            self.subprocess.terminate()
-            self.subprocess.wait()
-            self.subprocess = None
+        if self.jupyter is not None:
+            self.jupyter.terminate()
+            self.jupyter.wait()
+            self.jupyter = None
             time.sleep(2)
 
         return CodeBoxStatus(status="stopped")
@@ -462,9 +498,9 @@ class LocalBox(BaseBox):
                 pass
             self.ws = None
 
-        if self.subprocess is not None:
-            self.subprocess.terminate()
-            self.subprocess = None
+        if self.jupyter is not None:
+            self.jupyter.terminate()
+            self.jupyter = None
             await asyncio.sleep(2)
 
         if self.session is not None:
@@ -475,8 +511,10 @@ class LocalBox(BaseBox):
 
     @property
     def kernel_url(self) -> str:
+        """Return the url of the kernel."""
         return f"http://localhost:{self.port}/api"
 
     @property
     def ws_url(self) -> str:
+        """Return the url of the websocket."""
         return f"ws://localhost:{self.port}/api"

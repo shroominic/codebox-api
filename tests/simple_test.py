@@ -13,7 +13,6 @@ def test_codebox():
 
         output = codebox.run("print('Hello World!')")
         assert str(output) == "Hello World!\n"
-    except:
-        raise
+
     finally:
         codebox.stop()

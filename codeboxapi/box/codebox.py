@@ -1,10 +1,48 @@
-import os
+"""
+CodeBox API Wrapper
+~~~~~~~~~~~~~~~~~~~
+
+A basic wrapper for the CodeBox API.
+
+Usage
+-----
+
+.. code-block:: python
+
+    from codeboxapi import CodeBox
+
+    with CodeBox() as codebox:
+        codebox.status()
+        codebox.run(code="print('Hello World!')")
+        codebox.install("python-package")
+        codebox.upload("test.txt", b"Hello World!")
+        codebox.list_files()
+        codebox.download("test.txt")
+
+.. code-block:: python
+
+    from codeboxapi import CodeBox
+
+    async with CodeBox() as codebox:
+        await codebox.astatus()
+        await codebox.arun(code="print('Hello World!')")
+        await codebox.ainstall("python-package")
+        await codebox.aupload("test.txt", b"Hello World!")
+        await codebox.alist_files()
+        await codebox.adownload("test.txt")
+
+"""
+
+from os import PathLike
 from typing import Any, Optional
-from codeboxapi import settings
-from codeboxapi.box import BaseBox
-from codeboxapi.utils import base_request, abase_request
-from codeboxapi.schema import CodeBoxStatus, CodeBoxOutput, CodeBoxFile
+from uuid import UUID
+
 from aiohttp import ClientSession
+
+from codeboxapi.box.basebox import BaseBox
+from codeboxapi.config import settings
+from codeboxapi.schema import CodeBoxFile, CodeBoxOutput, CodeBoxStatus
+from codeboxapi.utils import abase_request, base_request
 
 
 class CodeBox(BaseBox):
@@ -17,39 +55,47 @@ class CodeBox(BaseBox):
             from .localbox import LocalBox
 
             return LocalBox(*args, **kwargs)
-        else:
-            return super().__new__(cls, *args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.session: Optional[ClientSession] = None
+        self.session_id: Optional[UUID] = kwargs.get("id", None)
+        self.aiohttp_session: Optional[ClientSession] = None
 
     def codebox_request(self, method, endpoint, *args, **kwargs) -> dict[str, Any]:
+        """Basic request to the CodeBox API"""
         self._update()
-        return base_request(method, f"/codebox/{self.id}" + endpoint, *args, **kwargs)
+        return base_request(
+            method, f"/codebox/{self.session_id}" + endpoint, *args, **kwargs
+        )
 
     async def acodebox_request(
         self, method, endpoint, *args, **kwargs
     ) -> dict[str, Any]:
+        """Basic async request to the CodeBox API"""
         self._update()
-        if self.session is None:
+        if self.aiohttp_session is None:
             raise RuntimeError("CodeBox session not started")
         return await abase_request(
-            self.session, method, f"/codebox/{self.id}" + endpoint, *args, **kwargs
+            self.aiohttp_session,
+            method,
+            f"/codebox/{self.session_id}" + endpoint,
+            *args,
+            **kwargs,
         )
 
     def start(self) -> CodeBoxStatus:
-        self.id = base_request(
+        self.session_id = base_request(
             method="GET",
             endpoint="/codebox/start",
         )["id"]
         return CodeBoxStatus(status="started")
 
     async def astart(self) -> CodeBoxStatus:
-        self.session = ClientSession()
-        self.id = (
+        self.aiohttp_session = ClientSession()
+        self.session_id = (
             await abase_request(
-                self.session,
+                self.aiohttp_session,
                 method="GET",
                 endpoint="/codebox/start",
             )
@@ -72,34 +118,30 @@ class CodeBox(BaseBox):
             )
         )
 
-    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None):
-        if not code and not file_path:
+    def run(
+        self, code: Optional[str] = None, file_path: Optional[PathLike] = None
+    ) -> CodeBoxOutput:
+        if not code and not file_path:  # R0801
             raise ValueError("Code or file_path must be specified!")
 
         if code and file_path:
             raise ValueError("Can only specify code or the file to read_from!")
 
         if file_path:
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 code = f.read()
 
         return CodeBoxOutput(
             **self.codebox_request(
                 method="POST",
-                endpoint=f"/run",
+                endpoint="/run",
                 body={"code": code},
             )
         )
 
     async def arun(
-        self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None
-    ):
-        if not code and not file_path:
-            raise ValueError("Code or file_path must be specified!")
-
-        if code and file_path:
-            raise ValueError("Can only specify code or the file to read_from!")
-
+        self, code: str, file_path: Optional[PathLike] = None
+    ) -> CodeBoxOutput:
         if file_path:  # TODO: Implement this
             raise NotImplementedError(
                 "Reading from FilePath is not supported in async mode yet!"
@@ -108,7 +150,7 @@ class CodeBox(BaseBox):
         return CodeBoxOutput(
             **await self.acodebox_request(
                 method="POST",
-                endpoint=f"/run",
+                endpoint="/run",
                 body={"code": code},
             )
         )
@@ -193,6 +235,22 @@ class CodeBox(BaseBox):
             )["files"]
         ]
 
+    def restart(self) -> CodeBoxStatus:
+        return CodeBoxStatus(
+            **self.codebox_request(
+                method="POST",
+                endpoint="/restart",
+            )
+        )
+
+    async def arestart(self) -> CodeBoxStatus:
+        return CodeBoxStatus(
+            **await self.acodebox_request(
+                method="POST",
+                endpoint="/restart",
+            )
+        )
+
     def stop(self) -> CodeBoxStatus:
         return CodeBoxStatus(
             **self.codebox_request(
@@ -208,7 +266,7 @@ class CodeBox(BaseBox):
                 endpoint="/stop",
             )
         )
-        if self.session:
-            await self.session.close()
-            self.session = None
+        if self.aiohttp_session:
+            await self.aiohttp_session.close()
+            self.aiohttp_session = None
         return status

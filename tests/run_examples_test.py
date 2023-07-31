@@ -1,5 +1,5 @@
 import asyncio
-import os, sys
+import sys
 from pathlib import Path
 
 
@@ -30,6 +30,9 @@ async def run_examples():
 
 def test_run_examples():
     """Integration test for running the examples."""
+    # TODO: Run the examples booth local and remote
+    # TODO: Use ENV variable to reuse the same remote codebox
+    # TODO: Use ENV variable to disable image and text output when testing
     asyncio.run(run_examples())
 
 

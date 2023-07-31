@@ -1,100 +1,103 @@
-import os
-from typing import Optional
-from datetime import datetime
-from typing_extensions import Self
+""" Abstract Base Class for Isolated Execution Environments (CodeBox's) """
+
 from abc import ABC, abstractmethod
-from codeboxapi.schema import (
-    CodeBoxStatus,
-    CodeBoxOutput,
-    CodeBoxFile,
-)
+from datetime import datetime
+from os import PathLike
+from typing import Optional
+from uuid import UUID
+
+from typing_extensions import Self
+
+from codeboxapi.schema import CodeBoxFile, CodeBoxOutput, CodeBoxStatus
 
 
 class BaseBox(ABC):
-    """
-    ABC for Isolated Execution Environments
-    """
+    """CodeBox Abstract Base Class"""
 
-    def __init__(self) -> None:
-        self.id: Optional[int] = None
+    def __init__(self, session_id: Optional[UUID] = None) -> None:
+        """Initialize the CodeBox instance"""
+        self.session_id = session_id
         self.last_interaction = datetime.now()
 
     def _update(self) -> None:
+        """Update last interaction time"""
         self.last_interaction = datetime.now()
 
     @abstractmethod
     def start(self) -> CodeBoxStatus:
-        ...
+        """Startup the CodeBox instance"""
 
     @abstractmethod
     async def astart(self) -> CodeBoxStatus:
-        ...
+        """Async Startup the CodeBox instance"""
 
     @abstractmethod
     def status(self) -> CodeBoxStatus:
-        ...
+        """Get the current status of the CodeBox instance"""
 
     @abstractmethod
     async def astatus(self) -> CodeBoxStatus:
-        ...
+        """Async Get the current status of the CodeBox instance"""
 
     @abstractmethod
     def run(
-        self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None
+        self, code: Optional[str] = None, file_path: Optional[PathLike] = None
     ) -> CodeBoxOutput:
-        ...
+        """Execute python code inside the CodeBox instance"""
 
     @abstractmethod
     async def arun(
-        self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None
+        self, code: str, file_path: Optional[PathLike] = None
     ) -> CodeBoxOutput:
-        ...
+        """Async Execute python code inside the CodeBox instance"""
 
     @abstractmethod
     def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
-        ...
+        """Upload a file as bytes to the CodeBox instance"""
 
     @abstractmethod
     async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus:
-        ...
+        """Async Upload a file as bytes to the CodeBox instance"""
 
     @abstractmethod
     def download(self, file_name: str) -> CodeBoxFile:
-        ...
+        """Download a file as CodeBoxFile schema"""
 
     @abstractmethod
     async def adownload(self, file_name: str) -> CodeBoxFile:
-        ...
+        """Async Download a file as CodeBoxFile schema"""
 
     @abstractmethod
     def install(self, package_name: str) -> CodeBoxStatus:
-        ...
+        """Install a python package to the venv"""
 
     @abstractmethod
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
-        ...
+        """Async Install a python package to the venv"""
 
     @abstractmethod
     def list_files(self) -> list[CodeBoxFile]:
-        ...
+        """List all available files inside the CodeBox instance"""
 
     @abstractmethod
     async def alist_files(self) -> list[CodeBoxFile]:
-        ...
+        """Async List all available files inside the CodeBox instance"""
 
-    # @abstractmethod  # TODO: implement
-    # def restart(self) -> CodeBoxStatus: ...
+    @abstractmethod
+    def restart(self) -> CodeBoxStatus:
+        """Restart the jupyter kernel inside the CodeBox instance"""
 
-    # @abstractmethod  # TODO: implement
-    # async def arestart(self) -> CodeBoxStatus: ...
+    @abstractmethod
+    async def arestart(self) -> CodeBoxStatus:
+        """Async Restart the jupyter kernel inside the CodeBox instance"""
 
     @abstractmethod
     def stop(self) -> CodeBoxStatus:
-        ...
+        """Terminate the CodeBox instance"""
 
     @abstractmethod
     async def astop(self) -> CodeBoxStatus:
-        ...
+        """Async Terminate the CodeBox instance"""
 
     def __enter__(self) -> Self:
         self.start()
@@ -109,3 +112,9 @@ class BaseBox(ABC):
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self.astop()
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} id={self.session_id}>"
+
+    def __str__(self) -> str:
+        return self.__repr__()
