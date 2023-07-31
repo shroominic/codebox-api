@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from os import PathLike
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from typing_extensions import Self
@@ -76,11 +76,11 @@ class BaseBox(ABC):
         """Async Install a python package to the venv"""
 
     @abstractmethod
-    def list_files(self) -> list[CodeBoxFile]:
+    def list_files(self) -> List[CodeBoxFile]:
         """List all available files inside the CodeBox instance"""
 
     @abstractmethod
-    async def alist_files(self) -> list[CodeBoxFile]:
+    async def alist_files(self) -> List[CodeBoxFile]:
         """Async List all available files inside the CodeBox instance"""
 
     @abstractmethod

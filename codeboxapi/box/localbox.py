@@ -11,7 +11,7 @@ import os
 import subprocess
 import time
 from asyncio.subprocess import Process
-from typing import Optional, Union
+from typing import List, Optional, Union
 from uuid import uuid4
 
 import aiohttp
@@ -449,13 +449,13 @@ class LocalBox(BaseBox):
         # restart kernel if needed TODO
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
-    def list_files(self) -> list[CodeBoxFile]:
+    def list_files(self) -> List[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None)
             for file_name in os.listdir(".codebox")
         ]
 
-    async def alist_files(self) -> list[CodeBoxFile]:
+    async def alist_files(self) -> List[CodeBoxFile]:
         return await asyncio.to_thread(self.list_files)
 
     def restart(self) -> CodeBoxStatus:

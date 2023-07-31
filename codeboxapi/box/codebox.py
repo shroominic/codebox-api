@@ -34,7 +34,7 @@ Usage
 """
 
 from os import PathLike
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from aiohttp import ClientSession
@@ -62,7 +62,7 @@ class CodeBox(BaseBox):
         self.session_id: Optional[UUID] = kwargs.get("id", None)
         self.aiohttp_session: Optional[ClientSession] = None
 
-    def codebox_request(self, method, endpoint, *args, **kwargs) -> dict[str, Any]:
+    def codebox_request(self, method, endpoint, *args, **kwargs) -> Dict[str, Any]:
         """Basic request to the CodeBox API"""
         self._update()
         return base_request(
@@ -71,7 +71,7 @@ class CodeBox(BaseBox):
 
     async def acodebox_request(
         self, method, endpoint, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Basic async request to the CodeBox API"""
         self._update()
         if self.aiohttp_session is None:
@@ -213,7 +213,7 @@ class CodeBox(BaseBox):
             )
         )
 
-    def list_files(self) -> list[CodeBoxFile]:
+    def list_files(self) -> List[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None)
             for file_name in (
@@ -224,7 +224,7 @@ class CodeBox(BaseBox):
             )["files"]
         ]
 
-    async def alist_files(self) -> list[CodeBoxFile]:
+    async def alist_files(self) -> List[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None)
             for file_name in (
