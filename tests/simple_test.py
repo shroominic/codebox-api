@@ -3,11 +3,11 @@ import codeboxapi as cb
 
 def test_codebox():
     codebox = cb.CodeBox()
-    
+
     try:
         status = codebox.start()
         assert str(status) == "started"
-        
+
         status = codebox.status()
         assert str(status) == "running"
 
@@ -17,4 +17,3 @@ def test_codebox():
         raise
     finally:
         codebox.stop()
-        

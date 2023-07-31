@@ -29,9 +29,9 @@ async def run_examples():
 
 
 def test_run_examples():
-    """ Integration test for running the examples. """
+    """Integration test for running the examples."""
     asyncio.run(run_examples())
-    
-    
+
+
 if __name__ == "__main__":
     test_run_examples()

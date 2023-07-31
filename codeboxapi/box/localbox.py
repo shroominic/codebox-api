@@ -12,11 +12,7 @@ from websockets.exceptions import ConnectionClosedError
 from websockets.client import WebSocketClientProtocol, connect as ws_connect
 from websockets.sync.client import connect as ws_connect_sync, ClientConnection
 from codeboxapi.box import BaseBox
-from codeboxapi.schema import (
-    CodeBoxStatus, 
-    CodeBoxOutput, 
-    CodeBoxFile
-)
+from codeboxapi.schema import CodeBoxStatus, CodeBoxOutput, CodeBoxFile
 from ..config import settings
 
 
@@ -24,11 +20,12 @@ class LocalBox(BaseBox):
     """
     LocalBox is a CodeBox implementation that runs code locally.
     This is useful for testing and development.c
-    In case you don't put an api_key, 
+    In case you don't put an api_key,
     this is the default CodeBox.
     """
+
     _instance: Optional[Self] = None
-    
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super().__new__(cls, *args, **kwargs)
@@ -39,15 +36,17 @@ class LocalBox(BaseBox):
                 "      Make sure to put an API-Key in production.\n"
             )
         return cls._instance
-        
+
     def __init__(self, port: int = 8888) -> None:
         super().__init__()
         self.port = port
         self.kernel: Optional[dict] = None
         self.ws: Union[WebSocketClientProtocol, ClientConnection, None] = None
-        self.subprocess: Union[asyncio.subprocess.Process, subprocess.Popen, None] = None
+        self.subprocess: Union[
+            asyncio.subprocess.Process, subprocess.Popen, None
+        ] = None
         self.session: Optional[aiohttp.ClientSession] = None
-    
+
     def start(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
         self._check_port()
@@ -77,26 +76,25 @@ class LocalBox(BaseBox):
         while True:
             try:
                 response = requests.get(self.kernel_url)
-                if response.status_code == 200: break
+                if response.status_code == 200:
+                    break
             except requests.exceptions.ConnectionError:
                 pass
             if settings.VERBOSE:
                 print("Waiting for kernel to start...")
             time.sleep(1)
-        
+
         response = requests.post(
             f"{self.kernel_url}/kernels", headers={"Content-Type": "application/json"}
         )
         self.kernel = response.json()
         if self.kernel is None:
             raise Exception("Could not start kernel")
-        
-        self.ws = ws_connect_sync(
-            f"{self.ws_url}/kernels/{self.kernel['id']}/channels"
-        )
-        
+
+        self.ws = ws_connect_sync(f"{self.ws_url}/kernels/{self.kernel['id']}/channels")
+
         return CodeBoxStatus(status="started")
-    
+
     def _check_port(self) -> None:
         try:
             response = requests.get(f"http://localhost:{self.port}")
@@ -106,7 +104,7 @@ class LocalBox(BaseBox):
             if response.status_code == 200:
                 self.port += 1
                 self._check_port()
-    
+
     async def astart(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
         self.session = aiohttp.ClientSession()
@@ -123,12 +121,13 @@ class LocalBox(BaseBox):
             f"--KernelGatewayApp.port={self.port}",
             stdout=out,
             stderr=out,
-            cwd=".codebox"
+            cwd=".codebox",
         )
         while True:
             try:
                 response = await self.session.get(self.kernel_url)
-                if response.status == 200: break
+                if response.status == 200:
+                    break
             except aiohttp.ClientConnectorError:
                 pass
             except aiohttp.ServerDisconnectedError:
@@ -146,9 +145,9 @@ class LocalBox(BaseBox):
         self.ws = await ws_connect(
             f"{self.ws_url}/kernels/{self.kernel['id']}/channels"
         )
-        
+
         return CodeBoxStatus(status="started")
-    
+
     async def _acheck_port(self) -> None:
         try:
             if self.session is None:
@@ -162,45 +161,50 @@ class LocalBox(BaseBox):
             if response.status == 200:
                 self.port += 1
                 await self._acheck_port()
-            
+
     def status(self) -> CodeBoxStatus:
         return CodeBoxStatus(
-            status = "running" 
-                if self.kernel 
-                    and requests.get(self.kernel_url).status_code == 200
-                else "stopped"
+            status="running"
+            if self.kernel and requests.get(self.kernel_url).status_code == 200
+            else "stopped"
         )
-    
+
     async def astatus(self) -> CodeBoxStatus:
         return CodeBoxStatus(
-            status = "running" 
-                if self.kernel 
-                    and self.session
-                    and (await self.session.get(self.kernel_url)).status == 200
-                else "stopped"
+            status="running"
+            if self.kernel
+            and self.session
+            and (await self.session.get(self.kernel_url)).status == 200
+            else "stopped"
         )
-    
-    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+
+    def run(
+        self,
+        code: Optional[str] = None,
+        file_path: Optional[os.PathLike] = None,
+        retry=3,
+    ) -> CodeBoxOutput:
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
-        
+
         if code and file_path:
             raise ValueError("Can only specify code or the file to read_from!")
-        
+
         if file_path:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 code = f.read()
 
         # run code in jupyter kernel
-        if retry <= 0: 
+        if retry <= 0:
             raise RuntimeError("Could not connect to kernel")
-        if not self.ws: 
+        if not self.ws:
             self.start()
-            if not self.ws: raise RuntimeError("Could not connect to kernel")
-        
+            if not self.ws:
+                raise RuntimeError("Could not connect to kernel")
+
         if settings.VERBOSE:
             print("Running code:\n", code)
-        
+
         # send code to kernel
         self.ws.send(
             json.dumps(
@@ -232,8 +236,8 @@ class LocalBox(BaseBox):
                 received_msg = json.loads(self.ws.recv())
             except ConnectionClosedError:
                 self.start()
-                return self.run(code, file_path, retry-1)
-            
+                return self.run(code, file_path, retry - 1)
+
             if (
                 received_msg["header"]["msg_type"] == "stream"
                 and received_msg["parent_header"]["msg_id"] == msg_id
@@ -244,7 +248,7 @@ class LocalBox(BaseBox):
                 result += msg + "\n"
                 if settings.VERBOSE:
                     print("Output:\n", result)
-            
+
             elif (
                 received_msg["header"]["msg_type"] == "execute_result"
                 and received_msg["parent_header"]["msg_id"] == msg_id
@@ -252,28 +256,27 @@ class LocalBox(BaseBox):
                 result += received_msg["content"]["data"]["text/plain"].strip() + "\n"
                 if settings.VERBOSE:
                     print("Output:\n", result)
-            
+
             elif received_msg["header"]["msg_type"] == "display_data":
                 if "image/png" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
-                        type="image/png", 
-                        content=received_msg["content"]["data"]["image/png"]
+                        type="image/png",
+                        content=received_msg["content"]["data"]["image/png"],
                     )
                 elif "text/plain" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
-                        type="text", 
-                        content=received_msg["content"]["data"]["text/plain"]
+                        type="text",
+                        content=received_msg["content"]["data"]["text/plain"],
                     )
             elif (
                 received_msg["header"]["msg_type"] == "status"
                 and received_msg["parent_header"]["msg_id"] == msg_id
                 and received_msg["content"]["execution_state"] == "idle"
-            ):  
-                if len(result) > 500: 
+            ):
+                if len(result) > 500:
                     result = "[...]\n" + result[-500:]
                 return CodeBoxOutput(
-                    type = "text", 
-                    content = result or "code run successfully (no output)"
+                    type="text", content=result or "code run successfully (no output)"
                 )
 
             elif (
@@ -283,35 +286,38 @@ class LocalBox(BaseBox):
                 error = f"{received_msg['content']['ename']}: {received_msg['content']['evalue']}"
                 if settings.VERBOSE:
                     print("Error:\n", error)
-                return CodeBoxOutput(
-                    type="error", 
-                    content=error
-                )
-    
-    async def arun(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None, retry=3) -> CodeBoxOutput:
+                return CodeBoxOutput(type="error", content=error)
+
+    async def arun(
+        self,
+        code: Optional[str] = None,
+        file_path: Optional[os.PathLike] = None,
+        retry=3,
+    ) -> CodeBoxOutput:
         if not code and not file_path:
             raise ValueError("Code or file_path must be specified!")
-        
+
         if code and file_path:
             raise ValueError("Can only specify code or the file to read_from!")
-        
+
         if file_path:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 code = await f.read()
 
         # run code in jupyter kernel
-        if retry <= 0: 
+        if retry <= 0:
             raise RuntimeError("Could not connect to kernel")
-        if not self.ws: 
+        if not self.ws:
             await self.astart()
-            if not self.ws: raise RuntimeError("Could not connect to kernel")
-        
+            if not self.ws:
+                raise RuntimeError("Could not connect to kernel")
+
         if settings.VERBOSE:
             print("Running code:\n", code)
-        
+
         if not isinstance(self.ws, WebSocketClientProtocol):
             raise RuntimeError("Mixing asyncio and sync code is not supported")
-        
+
         await self.ws.send(
             json.dumps(
                 {
@@ -340,8 +346,8 @@ class LocalBox(BaseBox):
                 received_msg = json.loads(await self.ws.recv())
             except ConnectionClosedError:
                 await self.astart()
-                return await self.arun(code, file_path, retry-1)
-            
+                return await self.arun(code, file_path, retry - 1)
+
             if (
                 received_msg["header"]["msg_type"] == "stream"
                 and received_msg["parent_header"]["msg_id"] == msg_id
@@ -352,7 +358,7 @@ class LocalBox(BaseBox):
                 result += msg + "\n"
                 if settings.VERBOSE:
                     print("Output:\n", result)
-            
+
             elif (
                 received_msg["header"]["msg_type"] == "execute_result"
                 and received_msg["parent_header"]["msg_id"] == msg_id
@@ -360,28 +366,27 @@ class LocalBox(BaseBox):
                 result += received_msg["content"]["data"]["text/plain"].strip() + "\n"
                 if settings.VERBOSE:
                     print("Output:\n", result)
-            
+
             elif received_msg["header"]["msg_type"] == "display_data":
                 if "image/png" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
-                        type="image/png", 
-                        content=received_msg["content"]["data"]["image/png"]
+                        type="image/png",
+                        content=received_msg["content"]["data"]["image/png"],
                     )
                 elif "text/plain" in received_msg["content"]["data"]:
                     return CodeBoxOutput(
-                        type="text", 
-                        content=received_msg["content"]["data"]["text/plain"]
+                        type="text",
+                        content=received_msg["content"]["data"]["text/plain"],
                     )
             elif (
                 received_msg["header"]["msg_type"] == "status"
                 and received_msg["parent_header"]["msg_id"] == msg_id
                 and received_msg["content"]["execution_state"] == "idle"
-            ):  
-                if len(result) > 500: 
+            ):
+                if len(result) > 500:
                     result = "[...]\n" + result[-500:]
                 return CodeBoxOutput(
-                    type = "text", 
-                    content = result or "code run successfully (no output)"
+                    type="text", content=result or "code run successfully (no output)"
                 )
 
             elif (
@@ -391,52 +396,46 @@ class LocalBox(BaseBox):
                 error = f"{received_msg['content']['ename']}: {received_msg['content']['evalue']}"
                 if settings.VERBOSE:
                     print("Error:\n", error)
-                return CodeBoxOutput(
-                    type="error", 
-                    content=error
-                )
-        
+                return CodeBoxOutput(type="error", content=error)
+
     def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
         with open(os.path.join(".codebox", file_name), "wb") as f:
             f.write(content)
-        
+
         return CodeBoxStatus(status=f"{file_name} uploaded successfully")
-    
+
     async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus:
         return await asyncio.to_thread(self.upload, file_name, content)
-    
+
     def download(self, file_name: str) -> CodeBoxFile:
         with open(os.path.join(".codebox", file_name), "rb") as f:
             content = f.read()
-        
-        return CodeBoxFile(
-            name=file_name,
-            content=content
-        )
-        
+
+        return CodeBoxFile(name=file_name, content=content)
+
     async def adownload(self, file_name: str) -> CodeBoxFile:
         return await asyncio.to_thread(self.download, file_name)
-        
+
     def install(self, package_name: str) -> CodeBoxStatus:
         self.run(f"!pip install -q {package_name}")
         # restart kernel if needed TODO
         return CodeBoxStatus(status=f"{package_name} installed successfully")
-    
+
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
         await self.arun(f"!pip install -q {package_name}")
         # restart kernel if needed TODO
         return CodeBoxStatus(status=f"{package_name} installed successfully")
-    
+
     def list_files(self) -> list[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None)
             for file_name in os.listdir(".codebox")
         ]
-        
+
     async def alist_files(self) -> list[CodeBoxFile]:
         return await asyncio.to_thread(self.list_files)
-    
+
     def stop(self) -> CodeBoxStatus:
         if self.ws is not None:
             try:
@@ -444,16 +443,16 @@ class LocalBox(BaseBox):
             except ConnectionClosedError:
                 pass
             self.ws = None
-        
+
         if self.subprocess is not None:
             self.subprocess.terminate()
             self.subprocess.wait()
             self.subprocess = None
             time.sleep(2)
-            
+
         return CodeBoxStatus(status="stopped")
-    
-    async def astop(self) -> CodeBoxStatus:            
+
+    async def astop(self) -> CodeBoxStatus:
         if self.ws is not None:
             try:
                 if not isinstance(self.ws, WebSocketClientProtocol):
@@ -462,22 +461,22 @@ class LocalBox(BaseBox):
             except ConnectionClosedError:
                 pass
             self.ws = None
-            
+
         if self.subprocess is not None:
             self.subprocess.terminate()
             self.subprocess = None
             await asyncio.sleep(2)
-            
+
         if self.session is not None:
             await self.session.close()
             self.session = None
-        
+
         return CodeBoxStatus(status="stopped")
 
     @property
     def kernel_url(self) -> str:
         return f"http://localhost:{self.port}/api"
-    
+
     @property
     def ws_url(self) -> str:
         return f"ws://localhost:{self.port}/api"

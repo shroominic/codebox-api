@@ -4,7 +4,7 @@ from codeboxapi.box.codebox import CodeBox
 
 
 __all__ = [
-    "CodeBox", 
-    "set_api_key", 
+    "CodeBox",
+    "set_api_key",
     "settings",
 ]

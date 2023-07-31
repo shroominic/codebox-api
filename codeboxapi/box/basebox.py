@@ -4,89 +4,108 @@ from datetime import datetime
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from codeboxapi.schema import (
-    CodeBoxStatus, 
+    CodeBoxStatus,
     CodeBoxOutput,
     CodeBoxFile,
 )
 
 
 class BaseBox(ABC):
-    """ 
+    """
     ABC for Isolated Execution Environments
     """
-    
+
     def __init__(self) -> None:
         self.id: Optional[int] = None
         self.last_interaction = datetime.now()
 
     def _update(self) -> None:
         self.last_interaction = datetime.now()
-    
-    @abstractmethod
-    def start(self) -> CodeBoxStatus: ...
-    
-    @abstractmethod
-    async def astart(self) -> CodeBoxStatus: ...
-    
-    @abstractmethod        
-    def status(self) -> CodeBoxStatus: ...
 
     @abstractmethod
-    async def astatus(self) -> CodeBoxStatus: ...
-    
-    @abstractmethod
-    def run(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
-    
-    @abstractmethod
-    async def arun(self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None) -> CodeBoxOutput: ...
-    
-    @abstractmethod
-    def upload(self, file_name: str, content: bytes) -> CodeBoxStatus: ...
-    
-    @abstractmethod
-    async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus: ...
+    def start(self) -> CodeBoxStatus:
+        ...
 
     @abstractmethod
-    def download(self, file_name: str) -> CodeBoxFile: ...
-    
+    async def astart(self) -> CodeBoxStatus:
+        ...
+
     @abstractmethod
-    async def adownload(self, file_name: str) -> CodeBoxFile: ...
-    
+    def status(self) -> CodeBoxStatus:
+        ...
+
     @abstractmethod
-    def install(self, package_name: str) -> CodeBoxStatus: ...
-    
+    async def astatus(self) -> CodeBoxStatus:
+        ...
+
     @abstractmethod
-    async def ainstall(self, package_name: str) -> CodeBoxStatus: ...
-    
+    def run(
+        self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None
+    ) -> CodeBoxOutput:
+        ...
+
     @abstractmethod
-    def list_files(self) -> list[CodeBoxFile]: ...
-    
+    async def arun(
+        self, code: Optional[str] = None, file_path: Optional[os.PathLike] = None
+    ) -> CodeBoxOutput:
+        ...
+
     @abstractmethod
-    async def alist_files(self) -> list[CodeBoxFile]: ...
-    
+    def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
+        ...
+
+    @abstractmethod
+    async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus:
+        ...
+
+    @abstractmethod
+    def download(self, file_name: str) -> CodeBoxFile:
+        ...
+
+    @abstractmethod
+    async def adownload(self, file_name: str) -> CodeBoxFile:
+        ...
+
+    @abstractmethod
+    def install(self, package_name: str) -> CodeBoxStatus:
+        ...
+
+    @abstractmethod
+    async def ainstall(self, package_name: str) -> CodeBoxStatus:
+        ...
+
+    @abstractmethod
+    def list_files(self) -> list[CodeBoxFile]:
+        ...
+
+    @abstractmethod
+    async def alist_files(self) -> list[CodeBoxFile]:
+        ...
+
     # @abstractmethod  # TODO: implement
     # def restart(self) -> CodeBoxStatus: ...
-    
+
     # @abstractmethod  # TODO: implement
     # async def arestart(self) -> CodeBoxStatus: ...
-    
+
     @abstractmethod
-    def stop(self) -> CodeBoxStatus: ...
-    
+    def stop(self) -> CodeBoxStatus:
+        ...
+
     @abstractmethod
-    async def astop(self) -> CodeBoxStatus: ...
-        
+    async def astop(self) -> CodeBoxStatus:
+        ...
+
     def __enter__(self) -> Self:
         self.start()
         return self
-    
+
     async def __aenter__(self) -> Self:
         await self.astart()
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.stop()
-        
+
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self.astop()
-
