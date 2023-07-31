@@ -4,6 +4,7 @@ from codeboxapi import CodeBox
 
 async def main():
     async with CodeBox() as codebox:
+        raise NotImplementedError("This example is not working yet")
         # download the iris dataset
         csv_bytes = requests.get("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data").content
         
