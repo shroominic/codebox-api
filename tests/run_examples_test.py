@@ -40,7 +40,6 @@ def test_run_examples():
     load_dotenv()
     os.environ["CODEBOX_TEST"] = "True"
     # TODO: Use ENV variable to reuse the same remote codebox
-    # TODO: Use ENV variable to disable image and text output when testing
     asyncio.run(run_examples())
     asyncio.run(run_examples_local())
 
