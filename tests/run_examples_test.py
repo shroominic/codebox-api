@@ -1,39 +1,48 @@
 import asyncio
+import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
 
-async def run_example(file: Path):
-    # Add the examples directory to the path
-    sys.path.append(str(file.parent))
 
-    # Run the example
-    process = await asyncio.create_subprocess_exec("python", file.absolute())
-    print(f"Running example {file}...")
+async def run_example(file: Path, local: bool = False):
+    process = await asyncio.create_subprocess_exec(
+        Path(sys.executable).absolute(),
+        file.absolute(),
+        env={"CODEBOX_API_KEY": "local" if local else os.environ["CODEBOX_API_KEY"]},
+    )
     await process.wait()
 
-    # check the return code
     if process.returncode != 0:
         raise Exception(f"Example {file} failed with return code {process.returncode}")
 
-    # Remove the examples directory from the path
-    sys.path.remove(str(file.parent))
-
 
 async def run_examples():
-    example_files = list(Path("examples").glob("**/*.py"))
-    # Create a task for each example file
-    tasks = [asyncio.create_task(run_example(file)) for file in example_files]
-    # Wait for all tasks to complete
-    await asyncio.gather(*tasks)
+    if os.environ.get("CODEBOX_API_KEY") is None:
+        return print("Skipping remote examples because CODEBOX_API_KEY is not set")
+
+    await asyncio.gather(
+        *[
+            asyncio.create_task(run_example(file))
+            for file in list(Path("examples").glob("**/*.py"))
+        ]
+    )
+
+
+async def run_examples_local():
+    for file in list(Path("examples").glob("**/*.py")):
+        await run_example(file, local=True)
 
 
 def test_run_examples():
     """Integration test for running the examples."""
-    # TODO: Run the examples booth local and remote
+    load_dotenv()
+    os.environ["CODEBOX_TEST"] = "True"
     # TODO: Use ENV variable to reuse the same remote codebox
     # TODO: Use ENV variable to disable image and text output when testing
     asyncio.run(run_examples())
+    asyncio.run(run_examples_local())
 
 
 if __name__ == "__main__":
