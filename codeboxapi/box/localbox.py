@@ -9,8 +9,10 @@ import asyncio
 import json
 import os
 import subprocess
+import sys
 import time
 from asyncio.subprocess import Process
+from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 
@@ -67,8 +69,11 @@ class LocalBox(BaseBox):
         else:
             out = subprocess.PIPE
         try:
+            python = Path(sys.executable).absolute()
             self.jupyter = subprocess.Popen(
                 [
+                    python,
+                    "-m",
                     "jupyter",
                     "kernelgateway",
                     "--KernelGatewayApp.ip='0.0.0.0'",
@@ -127,7 +132,10 @@ class LocalBox(BaseBox):
             out = None
         else:
             out = asyncio.subprocess.PIPE
+        python = Path(sys.executable).absolute()
         self.jupyter = await asyncio.create_subprocess_exec(
+            python,
+            "-m",
             "jupyter",
             "kernelgateway",
             "--KernelGatewayApp.ip='0.0.0.0'",
@@ -306,11 +314,6 @@ class LocalBox(BaseBox):
                 if settings.VERBOSE:
                     print("Error:\n", error)
                 return CodeBoxOutput(type="error", content=error)
-
-            return CodeBoxOutput(
-                type="error",
-                content="Unknown message",
-            )
 
     async def arun(
         self,

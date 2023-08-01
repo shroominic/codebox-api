@@ -51,10 +51,15 @@ class CodeBox(BaseBox):
     """
 
     def __new__(cls, *args, **kwargs):
-        if settings.CODEBOX_API_KEY is None:
+        if (
+            settings.CODEBOX_API_KEY is None
+            or settings.CODEBOX_API_KEY == "local"
+            or kwargs.pop("local", False)
+        ):
             from .localbox import LocalBox
 
             return LocalBox(*args, **kwargs)
+
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, *args, **kwargs) -> None:
