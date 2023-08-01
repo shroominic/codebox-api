@@ -1,4 +1,4 @@
-name: pre-commit
+name: code-check
 
 on: [push]
 
@@ -11,8 +11,10 @@ jobs:
       with:
         python-version: 3.9
     - name: Install pre-commit
-      run: pip install pre-commit pytest
+      run: pip install pre-commit poetry pytest
     - name: Run pre-commit
       run: pre-commit run --all-files
+    - name: Install dependencies
+      run: poetry install
     - name: Run tests
       run: pytest
