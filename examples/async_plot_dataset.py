@@ -1,3 +1,5 @@
+import os
+
 import requests
 
 from codeboxapi import CodeBox
@@ -11,16 +13,13 @@ async def main():
             "ml/machine-learning-databases/iris/iris.data"
         ).content
 
-        print("downloaded dataset")
-
         # upload the dataset to the codebox
         await codebox.aupload("iris.csv", csv_bytes)
 
-        print("Installing matplotlib and pandas")
+        # install the required packages
         await codebox.ainstall("matplotlib")
         await codebox.ainstall("pandas")
 
-        print("Installed")
         # dataset analysis code
         code = (
             "import pandas as pd\n"
@@ -40,11 +39,7 @@ async def main():
         output = await codebox.arun(code)
         print(output.type)
 
-        if output.type == "image/png":
-            # Convert the image content into an image
-            import base64
-            from io import BytesIO
-
+        if output.type == "image/png" and os.environ.get("CODEBOX_TEST") == "False":
             try:
                 from PIL import Image  # type: ignore
             except ImportError:
@@ -55,26 +50,20 @@ async def main():
                 )
                 exit(1)
 
-            # Decode the base64 string into bytes
+            # Convert the image content ( bytes) into an image
+            import base64
+            from io import BytesIO
+
             img_bytes = base64.b64decode(output.content)
-
-            # Create a BytesIO object
-            img_io = BytesIO(img_bytes)
-
-            # Use PIL to open the image
-            img = Image.open(img_io)
+            img_buffer = BytesIO(img_bytes)
 
             # Display the image
+            img = Image.open(img_buffer)
             img.show()
 
         elif output.type == "error":
             # error output
             print("Error:")
-            print(output.content)
-
-        else:
-            # normal text output
-            print("Text Output:")
             print(output.content)
 
 
