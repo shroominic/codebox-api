@@ -23,6 +23,9 @@ class CodeBoxStatus(BaseModel):
     def __repr__(self):
         return f"Status({self.status})"
 
+    def __eq__(self, other):
+        return self.__str__() == other.__str__()
+
 
 class CodeBoxOutput(BaseModel):
     """
@@ -37,6 +40,9 @@ class CodeBoxOutput(BaseModel):
 
     def __repr__(self):
         return f"{self.type}({self.content})"
+
+    def __eq__(self, other):
+        return self.__str__() == other.__str__()
 
 
 class CodeBoxFile(BaseModel):
