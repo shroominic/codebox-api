@@ -17,6 +17,7 @@ jupyter-kernel-gateway = { version = "^2", optional = true }
 Pillow = { version = "^9", optional = true }
 
 [tool.poetry.extras]
+all = ["jupyter-kernel-gateway", "Pillow"]
 local_support = ["jupyter-kernel-gateway"]
 image_support = ["Pillow"]
 
