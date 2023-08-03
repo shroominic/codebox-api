@@ -49,11 +49,9 @@ def handle_response(response: requests.Response):
     )
     if response.status_code != 200:
         raise CodeBoxError(
-            message=f"Error: {response.status_code}",
-            http_body=response.content,
             http_status=response.status_code,
-            headers=response.headers,
-            code=response.status_code,
+            json_body=response.json(),
+            headers=response.headers.__dict__,
         )
     return handler(response)
 
@@ -85,11 +83,9 @@ async def handle_response_async(response: ClientResponse) -> dict:
     )
     if response.status != 200:
         raise CodeBoxError(
-            message=f"Error: {response.status}",
-            http_body=await response.text(),
             http_status=response.status,
-            headers=response.headers,
-            code=response.status,
+            json_body=await response.json(),
+            headers=response.headers.__dict__,
         )
     return await handler(response)
 
