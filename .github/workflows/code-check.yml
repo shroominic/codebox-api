@@ -15,7 +15,7 @@ jobs:
     - name: Run pre-commit
       run: pre-commit run --all-files
     - name: Install dependencies
-      run: poetry config virtualenvs.create false && poetry install
+      run: poetry config virtualenvs.create false && poetry install --extras "all"
     - name: Run tests
       env:
         MY_ENV_VAR: ${{ secrets.CODEBOX_API_KEY }}
