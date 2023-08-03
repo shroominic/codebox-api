@@ -11,7 +11,7 @@ jobs:
       with:
         python-version: 3.9
     - name: Install pre-commit
-      run: pip install pre-commit poetry pytest
+      run: pip install pre-commit poetry pytest typing-extensions
     - name: Run pre-commit
       run: pre-commit run --all-files
     - name: Install dependencies
