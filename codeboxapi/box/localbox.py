@@ -68,6 +68,7 @@ class LocalBox(BaseBox):
             out = None
         else:
             out = subprocess.PIPE
+        self._check_installed()
         try:
             python = Path(sys.executable).absolute()
             self.jupyter = subprocess.Popen(
@@ -123,6 +124,20 @@ class LocalBox(BaseBox):
                 self.port += 1
                 self._check_port()
 
+    def _check_installed(self) -> None:
+        """if jupyter-kernel-gateway is installed"""
+        import pkg_resources  # type: ignore
+
+        try:
+            pkg_resources.get_distribution("jupyter-kernel-gateway")
+        except pkg_resources.DistributionNotFound:
+            print(
+                "Make sure 'jupyter-kernel-gateway' is installed "
+                "when using without a CODEBOX_API_KEY.\n"
+                "You can install it with 'pip install jupyter-kernel-gateway'."
+            )
+            raise
+
     async def astart(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
         self.session = aiohttp.ClientSession()
@@ -132,18 +147,27 @@ class LocalBox(BaseBox):
             out = None
         else:
             out = asyncio.subprocess.PIPE
+        self._check_installed()
         python = Path(sys.executable).absolute()
-        self.jupyter = await asyncio.create_subprocess_exec(
-            python,
-            "-m",
-            "jupyter",
-            "kernelgateway",
-            "--KernelGatewayApp.ip='0.0.0.0'",
-            f"--KernelGatewayApp.port={self.port}",
-            stdout=out,
-            stderr=out,
-            cwd=".codebox",
-        )
+        try:
+            self.jupyter = await asyncio.create_subprocess_exec(
+                python,
+                "-m",
+                "jupyter",
+                "kernelgateway",
+                "--KernelGatewayApp.ip='0.0.0.0'",
+                f"--KernelGatewayApp.port={self.port}",
+                stdout=out,
+                stderr=out,
+                cwd=".codebox",
+            )
+        except Exception as e:
+            print(e)
+            raise ModuleNotFoundError(
+                "Jupyter Kernel Gateway not found, please install it with:\n"
+                "`pip install jupyter_kernel_gateway`\n"
+                "to use the LocalBox."
+            )
         while True:
             try:
                 response = await self.session.get(self.kernel_url)
