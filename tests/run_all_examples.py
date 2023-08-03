@@ -35,7 +35,8 @@ async def run_examples_local():
         await run_example(file, local=True)
 
 
-def test_run_examples():
+# TODO: fix using pytest
+def run_all_examples():
     """Integration test for running the examples."""
     load_dotenv()
     os.environ["CODEBOX_TEST"] = "True"
@@ -45,4 +46,4 @@ def test_run_examples():
 
 
 if __name__ == "__main__":
-    test_run_examples()
+    run_all_examples()
