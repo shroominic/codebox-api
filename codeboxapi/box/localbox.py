@@ -18,7 +18,6 @@ from uuid import uuid4
 
 import aiohttp
 import requests
-from typing_extensions import Self
 from websockets.client import WebSocketClientProtocol
 from websockets.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosedError
@@ -37,7 +36,7 @@ class LocalBox(BaseBox):
     This is useful for testing and development.
     """
 
-    _instance: Optional[Self] = None
+    _instance: Optional["LocalBox"] = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:

@@ -6,8 +6,6 @@ from os import PathLike
 from typing import List, Optional
 from uuid import UUID
 
-from typing_extensions import Self
-
 from codeboxapi.schema import CodeBoxFile, CodeBoxOutput, CodeBoxStatus
 
 
@@ -99,11 +97,11 @@ class BaseBox(ABC):
     async def astop(self) -> CodeBoxStatus:
         """Async Terminate the CodeBox instance"""
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> "BaseBox":
         self.start()
         return self
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> "BaseBox":
         await self.astart()
         return self
 
