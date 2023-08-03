@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.14"
+version = "0.0.15"
 description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
 authors = ["Shroominic <contact@shroominic.com>"]
 readme = "README.md"
@@ -13,6 +13,8 @@ requests = "^2.27.1"
 aiohttp = "^3.8.4"
 websockets = "^11.0.3"
 python-dotenv = "^1.0.0"
+jupyter-kernel-gateway = { version = "^2", optional = true }
+Pillow = { version = "^9", optional = true }
 
 [tool.poetry.extras]
 local_support = ["jupyter-kernel-gateway"]
