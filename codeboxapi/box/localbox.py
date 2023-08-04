@@ -119,9 +119,12 @@ class LocalBox(BaseBox):
         except requests.exceptions.ConnectionError:
             pass
         else:
-            if response.status_code == 200:
-                self.port += 1
-                self._check_port()
+            try:
+                requests.post(f"http://localhost:{self.port}/api/shutdown")
+            except requests.exceptions.ConnectionError:
+                if response.status_code == 200:
+                    self.port += 1
+                    self._check_port()
 
     def _check_installed(self) -> None:
         """if jupyter-kernel-gateway is installed"""
@@ -499,35 +502,40 @@ class LocalBox(BaseBox):
         return CodeBoxStatus(status="restarted")
 
     def stop(self) -> CodeBoxStatus:
-        if self.ws is not None:
-            try:
-                self.ws.close()
-            except ConnectionClosedError:
-                pass
-            self.ws = None
-
         if self.jupyter is not None:
             self.jupyter.terminate()
             self.jupyter.wait()
             self.jupyter = None
             time.sleep(2)
 
-        return CodeBoxStatus(status="stopped")
-
-    async def astop(self) -> CodeBoxStatus:
         if self.ws is not None:
             try:
-                if not isinstance(self.ws, WebSocketClientProtocol):
-                    raise RuntimeError("Mixing asyncio and sync code is not supported")
-                await self.ws.close()
+                if isinstance(self.ws, ClientConnection):
+                    self.ws.close()
+                else:
+                    loop = asyncio.new_event_loop()
+                    loop.run_until_complete(self.ws.close())
             except ConnectionClosedError:
                 pass
             self.ws = None
 
+        return CodeBoxStatus(status="stopped")
+
+    async def astop(self) -> CodeBoxStatus:
         if self.jupyter is not None:
             self.jupyter.terminate()
             self.jupyter = None
             await asyncio.sleep(2)
+
+        if self.ws is not None:
+            try:
+                if isinstance(self.ws, WebSocketClientProtocol):
+                    await self.ws.close()
+                else:
+                    self.ws.close()
+            except ConnectionClosedError:
+                pass
+            self.ws = None
 
         if self.session is not None:
             await self.session.close()
@@ -544,3 +552,6 @@ class LocalBox(BaseBox):
     def ws_url(self) -> str:
         """Return the url of the websocket."""
         return f"ws://localhost:{self.port}/api"
+
+    def __del__(self):
+        self.stop()
