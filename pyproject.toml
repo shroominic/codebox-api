@@ -1,10 +1,24 @@
 [tool.poetry]
 name = "codeboxapi"
 version = "0.0.15"
-description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
 authors = ["Shroominic <contact@shroominic.com>"]
-readme = "README.md"
 license = "MIT"
+description = "CodeBox is the simplest cloud infrastructure for your LLM Apps and Services."
+keywords = ["codebox", "api", "cloud", "cloud-infra", "llm", "apps", "codeinterpreterapi"]
+readme = "README.md"
+homepage = "https://codeboxapi.com/"
+documentation = "https://codeboxapi.com/docs/"
+repository = "https://github.com/shroominic/codebox-api"
+classifiers = [
+    "Programming Language :: Python :: 3.9+",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: API Wrappers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Cloud Infrastructure :: Serverless",
+    "Topic :: Artificial Intelligence :: Large Language Models :: Agent Tools",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -21,9 +35,15 @@ all = ["jupyter-kernel-gateway", "Pillow"]
 local_support = ["jupyter-kernel-gateway"]
 image_support = ["Pillow"]
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pre-commit = "^3.3"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
