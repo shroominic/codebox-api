@@ -9,16 +9,6 @@ readme = "README.md"
 homepage = "https://codeboxapi.com/"
 documentation = "https://codeboxapi.com/docs/"
 repository = "https://github.com/shroominic/codebox-api"
-classifiers = [
-    "Programming Language :: Python :: 3.9+",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries :: API Wrappers",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Cloud Infrastructure :: Serverless",
-    "Topic :: Artificial Intelligence :: Large Language Models :: Agent Tools",
-]
 
 [tool.poetry.dependencies]
 python = "^3.9"
