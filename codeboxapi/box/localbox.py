@@ -555,3 +555,8 @@ class LocalBox(BaseBox):
 
     def __del__(self):
         self.stop()
+
+        if self.session is not None:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.session.close())
+            self.session = None
