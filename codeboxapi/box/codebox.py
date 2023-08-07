@@ -74,7 +74,7 @@ class CodeBox(BaseBox):
 
     def _update(self) -> None:
         """Update last interaction time"""
-        if self.session_id is not None:
+        if self.session_id is None:
             raise RuntimeError("Make sure to start your CodeBox before using it.")
         self.last_interaction = datetime.now()
 
