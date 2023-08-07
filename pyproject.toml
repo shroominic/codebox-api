@@ -3,8 +3,8 @@ name = "codeboxapi"
 version = "0.0.16"
 authors = ["Shroominic <contact@shroominic.com>"]
 license = "MIT"
-description = "CodeBox is a sandboxed python environment for your LLM Agents."
-keywords = ["codebox", "api", "cloud", "cloud-infra", "llm", "apps", "codeinterpreterapi"]
+description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
+keywords = ["codebox", "api", "python-interpreter", "cloud-infra", "llm", "apps", "codeinterpreterapi"]
 readme = "README.md"
 homepage = "https://codeboxapi.com/"
 documentation = "https://codeboxapi.com/docs"
@@ -34,12 +34,6 @@ mypy = "^1.4"
 black = "^23"
 flake8 = "^6"
 pre-commit = "^3"
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-mkdocs = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
