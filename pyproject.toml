@@ -33,6 +33,7 @@ pytest = "^7"
 mypy = "^1.4"
 black = "^23"
 flake8 = "^6"
+isort = "^5"
 pre-commit = "^3"
 
 [build-system]
