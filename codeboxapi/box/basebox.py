@@ -17,10 +17,6 @@ class BaseBox(ABC):
         self.session_id = session_id
         self.last_interaction = datetime.now()
 
-    def _update(self) -> None:
-        """Update last interaction time"""
-        self.last_interaction = datetime.now()
-
     @abstractmethod
     def start(self) -> CodeBoxStatus:
         """Startup the CodeBox instance"""

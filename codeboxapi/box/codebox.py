@@ -33,6 +33,7 @@ Usage
 
 """
 
+from datetime import datetime
 from os import PathLike
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -67,6 +68,16 @@ class CodeBox(BaseBox):
         self.session_id: Optional[UUID] = kwargs.get("id", None)
         self.aiohttp_session: Optional[ClientSession] = None
 
+    @classmethod
+    def from_id(cls, session_id: UUID) -> "CodeBox":
+        return cls(session_id=session_id)
+
+    def _update(self) -> None:
+        """Update last interaction time"""
+        if self.session_id is not None:
+            raise RuntimeError("Make sure to start your CodeBox before using it.")
+        self.last_interaction = datetime.now()
+
     def codebox_request(self, method, endpoint, *args, **kwargs) -> Dict[str, Any]:
         """Basic request to the CodeBox API"""
         self._update()
@@ -80,7 +91,7 @@ class CodeBox(BaseBox):
         """Basic async request to the CodeBox API"""
         self._update()
         if self.aiohttp_session is None:
-            raise RuntimeError("CodeBox session not started")
+            self.aiohttp_session = ClientSession()
         return await abase_request(
             self.aiohttp_session,
             method,
@@ -275,3 +286,11 @@ class CodeBox(BaseBox):
             await self.aiohttp_session.close()
             self.aiohttp_session = None
         return status
+
+    def __del__(self):
+        if self.aiohttp_session:
+            import asyncio
+
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.aiohttp_session.close())
+            self.aiohttp_session = None
