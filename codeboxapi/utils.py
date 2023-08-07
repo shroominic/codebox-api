@@ -51,7 +51,7 @@ def handle_response(response: requests.Response):
         raise CodeBoxError(
             http_status=response.status_code,
             json_body=response.json(),
-            headers=response.headers.__dict__,
+            headers=dict(response.headers.items()),
         )
     return handler(response)
 
@@ -85,7 +85,7 @@ async def handle_response_async(response: ClientResponse) -> dict:
         raise CodeBoxError(
             http_status=response.status,
             json_body=await response.json(),
-            headers=response.headers.__dict__,
+            headers=dict(response.headers.items()),
         )
     return await handler(response)
 
