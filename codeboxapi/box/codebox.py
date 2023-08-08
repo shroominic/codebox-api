@@ -35,7 +35,7 @@ Usage
 
 from datetime import datetime
 from os import PathLike
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from aiohttp import ClientSession
@@ -61,7 +61,7 @@ class CodeBox(BaseBox):
 
             return LocalBox(*args, **kwargs)
 
-        return super().__new__(cls, *args, **kwargs)
+        return super().__new__(cls)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -69,7 +69,7 @@ class CodeBox(BaseBox):
         self.aiohttp_session: Optional[ClientSession] = None
 
     @classmethod
-    def from_id(cls, session_id: int | UUID) -> "CodeBox":
+    def from_id(cls, session_id: Union[int, UUID]) -> "CodeBox":
         if isinstance(session_id, int):
             session_id = UUID(int=session_id)
         return cls(session_id=session_id)
