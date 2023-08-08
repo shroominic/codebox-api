@@ -65,7 +65,7 @@ class CodeBox(BaseBox):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.session_id: Optional[UUID] = kwargs.get("id", None)
+        self.session_id: Optional[UUID] = kwargs.pop("session_id", None)
         self.aiohttp_session: Optional[ClientSession] = None
 
     @classmethod
