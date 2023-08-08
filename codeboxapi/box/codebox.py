@@ -69,7 +69,9 @@ class CodeBox(BaseBox):
         self.aiohttp_session: Optional[ClientSession] = None
 
     @classmethod
-    def from_id(cls, session_id: UUID) -> "CodeBox":
+    def from_id(cls, session_id: int | UUID) -> "CodeBox":
+        if isinstance(session_id, int):
+            session_id = UUID(int=session_id)
         return cls(session_id=session_id)
 
     def _update(self) -> None:
