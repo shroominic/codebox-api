@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 from asyncio.subprocess import Process
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
@@ -57,7 +58,7 @@ class LocalBox(BaseBox):
         self.kernel_id: Optional[dict] = None
         self.ws: Union[WebSocketClientProtocol, ClientConnection, None] = None
         self.jupyter: Union[Process, subprocess.Popen, None] = None
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.aiohttp_session: Optional[aiohttp.ClientSession] = None
 
     def start(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
@@ -127,12 +128,9 @@ class LocalBox(BaseBox):
                     self._check_port()
 
     def _check_installed(self) -> None:
-        """if jupyter-kernel-gateway is installed"""
-        import pkg_resources  # type: ignore
-
         try:
-            pkg_resources.get_distribution("jupyter-kernel-gateway")
-        except pkg_resources.DistributionNotFound:
+            distribution("jupyter-kernel-gateway")
+        except PackageNotFoundError:
             print(
                 "Make sure 'jupyter-kernel-gateway' is installed "
                 "when using without a CODEBOX_API_KEY.\n"
@@ -142,7 +140,7 @@ class LocalBox(BaseBox):
 
     async def astart(self) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
-        self.session = aiohttp.ClientSession()
+        self.aiohttp_session = aiohttp.ClientSession()
         await self._acheck_port()
         if settings.VERBOSE:
             print("Starting kernel...")
@@ -172,7 +170,7 @@ class LocalBox(BaseBox):
             )
         while True:
             try:
-                response = await self.session.get(self.kernel_url)
+                response = await self.aiohttp_session.get(self.kernel_url)
                 if response.status == 200:
                     break
             except aiohttp.ClientConnectorError:
@@ -183,7 +181,7 @@ class LocalBox(BaseBox):
                 print("Waiting for kernel to start...")
             await asyncio.sleep(1)
 
-        response = await self.session.post(
+        response = await self.aiohttp_session.post(
             f"{self.kernel_url}/kernels", headers={"Content-Type": "application/json"}
         )
         self.kernel_id = (await response.json())["id"]
@@ -195,9 +193,9 @@ class LocalBox(BaseBox):
 
     async def _acheck_port(self) -> None:
         try:
-            if self.session is None:
-                self.session = aiohttp.ClientSession()
-            response = await self.session.get(f"http://localhost:{self.port}")
+            if self.aiohttp_session is None:
+                self.aiohttp_session = aiohttp.ClientSession()
+            response = await self.aiohttp_session.get(f"http://localhost:{self.port}")
         except aiohttp.ClientConnectorError:
             pass
         except aiohttp.ServerDisconnectedError:
@@ -219,8 +217,8 @@ class LocalBox(BaseBox):
         return CodeBoxStatus(
             status="running"
             if self.kernel_id
-            and self.session
-            and (await self.session.get(self.kernel_url)).status == 200
+            and self.aiohttp_session
+            and (await self.aiohttp_session.get(self.kernel_url)).status == 200
             else "stopped"
         )
 
@@ -470,12 +468,14 @@ class LocalBox(BaseBox):
 
     def install(self, package_name: str) -> CodeBoxStatus:
         self.run(f"!pip install -q {package_name}")
-        # restart kernel if needed TODO
+        self.restart()
+        self.run(f"try:\n    import {package_name}\nexcept:\n    pass")
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
         await self.arun(f"!pip install -q {package_name}")
-        # restart kernel if needed TODO
+        await self.arestart()
+        await self.arun(f"try:\n    import {package_name}\nexcept:\n    pass")
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     def list_files(self) -> List[CodeBoxFile]:
@@ -537,9 +537,9 @@ class LocalBox(BaseBox):
                 pass
             self.ws = None
 
-        if self.session is not None:
-            await self.session.close()
-            self.session = None
+        if self.aiohttp_session is not None:
+            await self.aiohttp_session.close()
+            self.aiohttp_session = None
 
         return CodeBoxStatus(status="stopped")
 
@@ -556,7 +556,7 @@ class LocalBox(BaseBox):
     def __del__(self):
         self.stop()
 
-        if self.session is not None:
+        if self.aiohttp_session is not None:
             loop = asyncio.new_event_loop()
-            loop.run_until_complete(self.session.close())
-            self.session = None
+            loop.run_until_complete(self.aiohttp_session.close())
+            self.aiohttp_session = None
