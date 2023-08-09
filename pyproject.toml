@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.17"
+version = "0.0.18"
 authors = ["Shroominic <contact@shroominic.com>"]
 license = "MIT"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
