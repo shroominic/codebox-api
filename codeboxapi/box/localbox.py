@@ -506,15 +506,17 @@ class LocalBox(BaseBox):
         return CodeBoxStatus(status="restarted")
 
     def stop(self) -> CodeBoxStatus:
-        for pid in self._jupyter_pids:
-            print(f"Killing {pid}")
-            os.kill(pid, signal.SIGTERM)
-
-        if self.jupyter is not None:
-            self.jupyter.terminate()
-            self.jupyter.wait()
-            self.jupyter = None
-            time.sleep(2)
+        try:
+            if self.jupyter is not None:
+                self.jupyter.terminate()
+                self.jupyter.wait()
+                self.jupyter = None
+                time.sleep(2)
+            else:
+                for pid in self._jupyter_pids:
+                    os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
 
         if self.ws is not None:
             try:

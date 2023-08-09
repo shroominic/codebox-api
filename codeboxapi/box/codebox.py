@@ -126,13 +126,13 @@ class CodeBox(BaseBox):
             if settings.VERBOSE:
                 print(f"{self} is already started!")
             return CodeBoxStatus(status="started")
-        self.session_id = (
-            await abase_request(
-                self.aiohttp_session,
-                method="GET",
-                endpoint="/codebox/start",
-            )
-        )["id"]
+        self.session_id = UUID(
+            int=(
+                await abase_request(
+                    self.aiohttp_session, method="GET", endpoint="/codebox/start"
+                )
+            )["id"]
+        )
         if settings.VERBOSE:
             print(f"{self} started!")
         return CodeBoxStatus(status="started")
@@ -287,12 +287,14 @@ class CodeBox(BaseBox):
         )
 
     def stop(self) -> CodeBoxStatus:
-        return CodeBoxStatus(
+        status = CodeBoxStatus(
             **self.codebox_request(
                 method="POST",
                 endpoint="/stop",
             )
         )
+        self.session_id = None
+        return status
 
     async def astop(self) -> CodeBoxStatus:
         status = CodeBoxStatus(
@@ -301,6 +303,7 @@ class CodeBox(BaseBox):
                 endpoint="/stop",
             )
         )
+        self.session_id = None
         if self.aiohttp_session:
             await self.aiohttp_session.close()
             self.aiohttp_session = None
