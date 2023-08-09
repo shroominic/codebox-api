@@ -63,28 +63,29 @@ class CodeBox(BaseBox):
 
         return super().__new__(cls)
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, /, **kwargs) -> None:
+        super().__init__()
         self.session_id: Optional[UUID] = kwargs.pop("session_id", None)
         self.aiohttp_session: Optional[ClientSession] = None
 
     @classmethod
-    def from_id(cls, session_id: Union[int, UUID]) -> "CodeBox":
-        if isinstance(session_id, int):
-            session_id = UUID(int=session_id)
-        return cls(session_id=session_id)
+    def from_id(cls, session_id: Union[int, UUID], **kwargs) -> "CodeBox":
+        kwargs["session_id"] = (
+            UUID(int=session_id) if isinstance(session_id, int) else session_id
+        )
+        return cls(**kwargs)
 
     def _update(self) -> None:
         """Update last interaction time"""
-        if self.session_id is None:
-            raise RuntimeError("Make sure to start your CodeBox before using it.")
         self.last_interaction = datetime.now()
 
     def codebox_request(self, method, endpoint, *args, **kwargs) -> Dict[str, Any]:
         """Basic request to the CodeBox API"""
         self._update()
+        if self.session_id is None:
+            raise RuntimeError("Make sure to start your CodeBox before using it.")
         return base_request(
-            method, f"/codebox/{self.session_id}" + endpoint, *args, **kwargs
+            method, f"/codebox/{self.session_id.int}" + endpoint, *args, **kwargs
         )
 
     async def acodebox_request(
@@ -94,23 +95,37 @@ class CodeBox(BaseBox):
         self._update()
         if self.aiohttp_session is None:
             self.aiohttp_session = ClientSession()
+        if self.session_id is None:
+            raise RuntimeError("Make sure to start your CodeBox before using it.")
         return await abase_request(
             self.aiohttp_session,
             method,
-            f"/codebox/{self.session_id}" + endpoint,
+            f"/codebox/{self.session_id.int}" + endpoint,
             *args,
             **kwargs,
         )
 
     def start(self) -> CodeBoxStatus:
-        self.session_id = base_request(
-            method="GET",
-            endpoint="/codebox/start",
-        )["id"]
+        if self.session_id is not None:
+            if settings.VERBOSE:
+                print(f"{self} is already started!")
+            return CodeBoxStatus(status="started")
+        self.session_id = UUID(
+            int=base_request(
+                method="GET",
+                endpoint="/codebox/start",
+            )["id"]
+        )
+        if settings.VERBOSE:
+            print(f"{self} started!")
         return CodeBoxStatus(status="started")
 
     async def astart(self) -> CodeBoxStatus:
         self.aiohttp_session = ClientSession()
+        if self.session_id is not None:
+            if settings.VERBOSE:
+                print(f"{self} is already started!")
+            return CodeBoxStatus(status="started")
         self.session_id = (
             await abase_request(
                 self.aiohttp_session,
@@ -118,6 +133,8 @@ class CodeBox(BaseBox):
                 endpoint="/codebox/start",
             )
         )["id"]
+        if settings.VERBOSE:
+            print(f"{self} started!")
         return CodeBoxStatus(status="started")
 
     def status(self):

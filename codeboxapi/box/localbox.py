@@ -8,6 +8,7 @@ this is the default CodeBox.
 import asyncio
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -38,10 +39,11 @@ class LocalBox(BaseBox):
     """
 
     _instance: Optional["LocalBox"] = None
+    _jupyter_pids: List[int] = []
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super().__new__(cls, *args, **kwargs)
+            cls._instance = super().__new__(cls)
         else:
             if settings.SHOW_INFO:
                 print(
@@ -52,8 +54,8 @@ class LocalBox(BaseBox):
                 )
         return cls._instance
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, /, **kwargs) -> None:
+        super().__init__(session_id=kwargs.pop("session_id", None))
         self.port: int = 8888
         self.kernel_id: Optional[dict] = None
         self.ws: Union[WebSocketClientProtocol, ClientConnection, None] = None
@@ -61,6 +63,7 @@ class LocalBox(BaseBox):
         self.aiohttp_session: Optional[aiohttp.ClientSession] = None
 
     def start(self) -> CodeBoxStatus:
+        self.session_id = uuid4()
         os.makedirs(".codebox", exist_ok=True)
         self._check_port()
         if settings.VERBOSE:
@@ -84,6 +87,7 @@ class LocalBox(BaseBox):
                 stderr=out,
                 cwd=".codebox",
             )
+            self._jupyter_pids.append(self.jupyter.pid)
         except FileNotFoundError:
             raise ModuleNotFoundError(
                 "Jupyter Kernel Gateway not found, please install it with:\n"
@@ -100,7 +104,10 @@ class LocalBox(BaseBox):
             if settings.VERBOSE:
                 print("Waiting for kernel to start...")
             time.sleep(1)
+        self._connect()
+        return CodeBoxStatus(status="started")
 
+    def _connect(self) -> None:
         response = requests.post(
             f"{self.kernel_url}/kernels",
             headers={"Content-Type": "application/json"},
@@ -112,20 +119,15 @@ class LocalBox(BaseBox):
 
         self.ws = ws_connect_sync(f"{self.ws_url}/kernels/{self.kernel_id}/channels")
 
-        return CodeBoxStatus(status="started")
-
     def _check_port(self) -> None:
         try:
             response = requests.get(f"http://localhost:{self.port}", timeout=90)
         except requests.exceptions.ConnectionError:
             pass
         else:
-            try:
-                requests.post(f"http://localhost:{self.port}/api/shutdown")
-            except requests.exceptions.ConnectionError:
-                if response.status_code == 200:
-                    self.port += 1
-                    self._check_port()
+            if response.status_code == 200:
+                self.port += 1
+                self._check_port()
 
     def _check_installed(self) -> None:
         try:
@@ -139,6 +141,7 @@ class LocalBox(BaseBox):
             raise
 
     async def astart(self) -> CodeBoxStatus:
+        self.session_id = uuid4()
         os.makedirs(".codebox", exist_ok=True)
         self.aiohttp_session = aiohttp.ClientSession()
         await self._acheck_port()
@@ -161,6 +164,7 @@ class LocalBox(BaseBox):
                 stderr=out,
                 cwd=".codebox",
             )
+            self._jupyter_pids.append(self.jupyter.pid)
         except Exception as e:
             print(e)
             raise ModuleNotFoundError(
@@ -180,7 +184,12 @@ class LocalBox(BaseBox):
             if settings.VERBOSE:
                 print("Waiting for kernel to start...")
             await asyncio.sleep(1)
+        await self._aconnect()
+        return CodeBoxStatus(status="started")
 
+    async def _aconnect(self) -> None:
+        if self.aiohttp_session is None:
+            self.aiohttp_session = aiohttp.ClientSession()
         response = await self.aiohttp_session.post(
             f"{self.kernel_url}/kernels", headers={"Content-Type": "application/json"}
         )
@@ -188,8 +197,6 @@ class LocalBox(BaseBox):
         if self.kernel_id is None:
             raise Exception("Could not start kernel")
         self.ws = await ws_connect(f"{self.ws_url}/kernels/{self.kernel_id}/channels")
-
-        return CodeBoxStatus(status="started")
 
     async def _acheck_port(self) -> None:
         try:
@@ -206,6 +213,9 @@ class LocalBox(BaseBox):
                 await self._acheck_port()
 
     def status(self) -> CodeBoxStatus:
+        if not self.kernel_id:
+            self._connect()
+
         return CodeBoxStatus(
             status="running"
             if self.kernel_id
@@ -214,6 +224,8 @@ class LocalBox(BaseBox):
         )
 
     async def astatus(self) -> CodeBoxStatus:
+        if not self.kernel_id:
+            await self._aconnect()
         return CodeBoxStatus(
             status="running"
             if self.kernel_id
@@ -242,9 +254,9 @@ class LocalBox(BaseBox):
         if retry <= 0:
             raise RuntimeError("Could not connect to kernel")
         if not self.ws:
-            self.start()
+            self._connect()
             if not self.ws:
-                raise RuntimeError("Could not connect to kernel")
+                raise RuntimeError("Jupyter not running. Make sure to start it first.")
 
         if settings.VERBOSE:
             print("Running code:\n", code)
@@ -354,9 +366,9 @@ class LocalBox(BaseBox):
         if retry <= 0:
             raise RuntimeError("Could not connect to kernel")
         if not self.ws:
-            await self.astart()
+            await self._aconnect()
             if not self.ws:
-                raise RuntimeError("Could not connect to kernel")
+                raise RuntimeError("Jupyter not running. Make sure to start it first.")
 
         if settings.VERBOSE:
             print("Running code:\n", code)
@@ -488,20 +500,16 @@ class LocalBox(BaseBox):
         return await asyncio.to_thread(self.list_files)
 
     def restart(self) -> CodeBoxStatus:
-        if self.jupyter is not None:
-            self.stop()
-        else:
-            self.start()
         return CodeBoxStatus(status="restarted")
 
     async def arestart(self) -> CodeBoxStatus:
-        if self.jupyter is not None:
-            await self.astop()
-        else:
-            await self.astart()
         return CodeBoxStatus(status="restarted")
 
     def stop(self) -> CodeBoxStatus:
+        for pid in self._jupyter_pids:
+            print(f"Killing {pid}")
+            os.kill(pid, signal.SIGTERM)
+
         if self.jupyter is not None:
             self.jupyter.terminate()
             self.jupyter.wait()
