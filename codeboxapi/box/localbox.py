@@ -96,7 +96,7 @@ class LocalBox(BaseBox):
             )
         while True:
             try:
-                response = requests.get(self.kernel_url, timeout=90)
+                response = requests.get(self.kernel_url, timeout=270)
                 if response.status_code == 200:
                     break
             except requests.exceptions.ConnectionError:
@@ -111,7 +111,7 @@ class LocalBox(BaseBox):
         response = requests.post(
             f"{self.kernel_url}/kernels",
             headers={"Content-Type": "application/json"},
-            timeout=90,
+            timeout=270,
         )
         self.kernel_id = response.json()["id"]
         if self.kernel_id is None:
@@ -121,7 +121,7 @@ class LocalBox(BaseBox):
 
     def _check_port(self) -> None:
         try:
-            response = requests.get(f"http://localhost:{self.port}", timeout=90)
+            response = requests.get(f"http://localhost:{self.port}", timeout=270)
         except requests.exceptions.ConnectionError:
             pass
         else:
@@ -219,7 +219,7 @@ class LocalBox(BaseBox):
         return CodeBoxStatus(
             status="running"
             if self.kernel_id
-            and requests.get(self.kernel_url, timeout=90).status_code == 200
+            and requests.get(self.kernel_url, timeout=270).status_code == 200
             else "stopped"
         )
 

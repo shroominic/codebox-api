@@ -100,7 +100,7 @@ def base_request(
     Makes a request to the CodeBox API.
     """
     request_data = build_request_data(method, endpoint, body, files)
-    response = requests.request(**request_data, timeout=90)
+    response = requests.request(**request_data, timeout=270)
     return handle_response(response)
 
 
