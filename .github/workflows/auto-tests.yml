@@ -1,0 +1,32 @@
+name: automatic pytest every 10 minutes
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Install dependencies using Poetry
+      run: |
+        poetry install --extras "all"
+
+    - name: Run pytest
+      run: |
+        poetry run pytest
