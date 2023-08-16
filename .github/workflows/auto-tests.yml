@@ -17,16 +17,13 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Install Poetry
+    - name: Install
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
-
-    - name: Install dependencies using Poetry
-      run: |
+        pip install poetry pytest
+        poetry config virtualenvs.create false
         poetry install --extras "all"
 
-    - name: Run pytest
-      run: |
-        pytest
+    - name: Run Pytest
+      env:
+        CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
+      run: pytest
