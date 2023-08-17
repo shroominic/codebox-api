@@ -1,4 +1,4 @@
-name: automatic pytest every 10 minutes
+name: 🔁 Pytest ⏳x15
 
 on:
   schedule:
