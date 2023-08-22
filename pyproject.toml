@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codeboxapi"
-version = "0.0.18"
+version = "0.0.19"
 authors = ["Shroominic <contact@shroominic.com>"]
 license = "MIT"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
@@ -28,6 +28,9 @@ image_support = ["Pillow"]
 
 [tool.poetry.group.dev]
 optional = true
+
+[tool.pytest.ini_options]
+filterwarnings = "ignore::DeprecationWarning"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7"
