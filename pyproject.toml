@@ -12,7 +12,8 @@ repository = "https://github.com/shroominic/codebox-api"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pydantic = "^1"
+pydantic = "^2"
+pydantic-settings = "^2"
 requests = "^2.27"
 aiohttp = "^3.8"
 websockets = "^11"

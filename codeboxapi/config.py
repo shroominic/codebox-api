@@ -6,7 +6,7 @@ Automatically loads environment variables from .env file
 from typing import Optional
 
 from dotenv import load_dotenv
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 # .env file
 load_dotenv("./.env")
