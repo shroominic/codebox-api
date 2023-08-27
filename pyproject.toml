@@ -35,9 +35,11 @@ filterwarnings = "ignore::DeprecationWarning"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7"
 mypy = "^1.4"
+types-requests = "^2.31"
 black = "^23"
 flake8 = "^6"
 isort = "^5"
+mkdocs-material = "^9.2.5"
 pre-commit = "^3"
 
 [build-system]
