@@ -1,17 +1,24 @@
-# Welcome to MkDocs
+# CodeBox API
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+The simplest SandBoxing solution for your LLM Agents.
 
-## Commands
+## Why is SandBoxing important?
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+When deploying LLM Agents to production, it is important to ensure
+that the code they run is safe and does not contain any malicious code.
+This is especially important when considering prompt injection, which
+could give an attacker access to the entire system.
 
-## Project layout
+## How does CodeBox work?
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+CodeBox uses a cloud hosted system to run hardened containers
+that are designed to be secure. These containers are then used to
+run the code that is sent to the API. This ensures that the code
+is run in a secure environment, and that the code cannot access
+the host system.
+
+## How do I use CodeBox?
+
+TODO: Add usage instructions
+
+## TODO
