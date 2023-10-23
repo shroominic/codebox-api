@@ -10,7 +10,6 @@
 | CodeBoxSettings | Configuration settings for the API client |
 | CodeBoxError | Custom exception class for API errors |
 
-
 ## BaseBox
 
 The BaseBox class is an abstract base class that defines the interface for isolated code execution environments, also called CodeBoxes. It contains abstract methods like `run`, `upload`, `download` etc. that all concrete CodeBox implementations need to implement. The BaseBox handles session management and enforces the core interface.
