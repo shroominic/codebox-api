@@ -42,7 +42,7 @@ with CodeBox() as codebox:
 
   # List files
   print(codebox.list_files())
-  
+
   # Download file
   data = codebox.download("data.csv")
   print(data.content)
@@ -60,7 +60,7 @@ with CodeBox() as codebox:
   # Install packages
   codebox.install("pandas")
   codebox.install("matplotlib")
-  
+
   # Use them
   codebox.run("import pandas as pd")
   codebox.run("import matplotlib.pyplot as plt")
@@ -94,12 +94,14 @@ Run multiple CodeBoxes in parallel:
 import asyncio
 from codeboxapi import CodeBox
 
-async def run_codebox():
-  async with CodeBox() as codebox:
-    await codebox.arun("print('Hello World!')")
-
 async def main():
-  await asyncio.gather(*[run_codebox() for i in range(10)])
+    await asyncio.gather(
+        spawn_codebox() for _ in range(10)
+    )
+
+async def spawn_codebox():
+    async with CodeBox() as codebox:
+        print(await codebox.arun("print('Hello World!')"))
 
 asyncio.run(main())
 ```
