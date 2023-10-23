@@ -1,4 +1,18 @@
-site_name: CodeBox API
+site_name: CodeBox API - Docs
+site_author: Shroominic
+site_url: https://shroominic.github.io/codebox-api/
+repo_name: shroominic/codebox-api
+repo_url: https://github.com/shroominic/codebox-api/
+
+nav:
+  - 'Getting Started':
+    - 'Welcome': 'index.md'
+    - 'Installation': 'installation.md'
+    - 'Usage': 'usage.md'
+  - 'Concepts': 'concepts.md'
+  - 'Examples': 'examples.md'
 
 theme:
   name: material
+  palette:
+    scheme: slate
