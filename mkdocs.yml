@@ -11,8 +11,12 @@ nav:
     - 'Usage': 'usage.md'
   - 'Concepts': 'concepts.md'
   - 'Examples': 'examples.md'
+  - 'API Reference': 'api.md'
 
 theme:
   name: material
   palette:
     scheme: slate
+
+plugins:
+  - neoteroi.mkdocsoad

@@ -20,6 +20,8 @@ websockets = "^11"
 python-dotenv = "^1"
 jupyter-kernel-gateway = { version = "^2", optional = true }
 Pillow = { version = "^9", optional = true }
+neoteroi-mkdocs = "^1.0.4"
+mkdocs-material = "^9.4.6"
 
 [tool.poetry.extras]
 all = ["jupyter-kernel-gateway", "Pillow"]
