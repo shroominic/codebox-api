@@ -9,6 +9,7 @@ nav:
     - 'Welcome': 'index.md'
     - 'Installation': 'installation.md'
     - 'Usage': 'usage.md'
+    - 'Settings': 'settings.md'
   - 'Concepts': 'concepts.md'
   - 'Examples': 'examples.md'
   - 'API Reference': 'api.md'
