@@ -50,6 +50,10 @@ Bear in mind, we don't have many automations set up right now,
 so you'll need to write an [email](mailto:contact@codeboxapi.com) for things like refunds,
 sub cancellations, or upgrades.
 
+## Docs
+
+Checkout the [documentation](https://shroominic.github.io/codebox-api/) for more details!
+
 ## Contributing
 
 Feel free to contribute to this project.
