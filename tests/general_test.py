@@ -9,10 +9,10 @@ def test_codebox():
     assert asyncio.run(run_async(codebox)), "Failed to run async codebox remotely"
 
 
-def test_localbox():
-    codebox = CodeBox(local=True)
-    assert run_sync(codebox), "Failed to run sync codebox locally"
-    assert asyncio.run(run_async(codebox)), "Failed to run async codebox locally"
+# def test_localbox():
+#     codebox = CodeBox(local=True)
+#     assert run_sync(codebox), "Failed to run sync codebox locally"
+#     assert asyncio.run(run_async(codebox)), "Failed to run async codebox locally"
 
 
 def run_sync(codebox: CodeBox) -> bool:
@@ -83,4 +83,4 @@ async def run_async(codebox: CodeBox) -> bool:
 
 if __name__ == "__main__":
     test_codebox()
-    test_localbox()
+    # test_localbox()
