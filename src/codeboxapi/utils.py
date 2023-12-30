@@ -41,7 +41,7 @@ def handle_response(response: requests.Response):
         "application/octet-stream": lambda r: {
             "content": BytesIO(r.content).read(),
             "name": r.headers["Content-Disposition"].split("=")[1],
-        }
+        },
         # Add other content type handlers here
     }
     handler = handlers.get(
