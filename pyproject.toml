@@ -37,6 +37,7 @@ dev-dependencies = [
     "neoteroi-mkdocs>=1",
     "mkdocs-material>=9",
     "types-requests>=2.31",
+    "matplotlib>=3.8.2",
 ]
 
 [project.optional-dependencies]
@@ -55,7 +56,7 @@ image_support = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/codebox_api"]
+packages = ["src/codeboxapi"]
 
 [tool.pytest.ini_options]
 filterwarnings = "ignore::DeprecationWarning"
