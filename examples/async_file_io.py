@@ -1,5 +1,4 @@
 import requests  # type: ignore
-
 from codeboxapi import CodeBox
 
 

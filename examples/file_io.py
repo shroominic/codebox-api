@@ -1,5 +1,4 @@
 import requests
-
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:

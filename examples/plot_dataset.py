@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 import requests
-
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:
