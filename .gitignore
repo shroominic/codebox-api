@@ -7,3 +7,5 @@
 *.tar.gz
 *.todo
 site
+.python-version
+requirements-dev.lock
