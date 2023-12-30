@@ -9,21 +9,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v2
+    - uses: eifinger/setup-rye@v1
       with:
-        python-version: 3.9
-
-    - name: Install
-      run: |
-        pip install poetry pytest
-        poetry config virtualenvs.create false
-        poetry install --extras "all"
-
+        enable_cache: true
+        cache_prefix: 'venv-codeboxapi'
+    - name: Sync rye
+      run: rye sync
     - name: Run Pytest
       env:
         CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
-      run: pytest
+      run: rye run pytest
