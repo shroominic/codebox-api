@@ -1,0 +1,21 @@
+[ ] - gpu support
+
+[ ] - different python versions
+
+[ ] - node/bun engine
+
+[ ] - metadata kw storage
+
+[ ] - different container sizes (cpu/ram)
+
+[ ] - variable timeout
+
+[ ] - request only mode with dynamic filesystem
+
+[ ] - general dynamic filesystem
+
+[ ] - requirements on startup
+
+[ ] - chromiumbox + vectorbox
+
+[ ] - gitbox
