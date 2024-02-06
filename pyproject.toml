@@ -1,6 +1,6 @@
 [project]
 name = "codeboxapi"
-version = "0.0.19"
+version = "0.1.19"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
 keywords = [
     "codebox",
