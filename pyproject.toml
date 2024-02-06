@@ -2,10 +2,16 @@
 name = "codeboxapi"
 version = "0.0.19"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
-keywords = ["codebox", "api", "python-interpreter", "cloud-infra", "llm", "apps", "codeinterpreterapi"]
-authors = [
-    { name = "Shroominic", email = "contact@shroominic.com" }
+keywords = [
+    "codebox",
+    "api",
+    "python-interpreter",
+    "cloud-infra",
+    "llm",
+    "apps",
+    "codeinterpreterapi",
 ]
+authors = [{ name = "Shroominic", email = "contact@shroominic.com" }]
 dependencies = [
     "pydantic>=2",
     "pydantic-settings>=2",
@@ -38,19 +44,13 @@ dev-dependencies = [
     "mkdocs-material>=9",
     "types-requests>=2.31",
     "matplotlib>=3.8.2",
+    "pip",
 ]
 
 [project.optional-dependencies]
-all = [
-    "jupyter-kernel-gateway>=2.5",
-    "Pillow>=10",
-]
-local_support = [
-    "jupyter-kernel-gateway>=2.5",
-]
-image_support = [
-    "Pillow>=10",
-]
+all = ["jupyter-kernel-gateway>=2.5, <3", "Pillow>=10"]
+local_support = ["jupyter-kernel-gateway>=2.5, <3"]
+image_support = ["Pillow>=10"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
