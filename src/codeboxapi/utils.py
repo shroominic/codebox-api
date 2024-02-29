@@ -8,8 +8,8 @@ import requests
 from aiohttp import ClientResponse, ClientSession, FormData
 from aiohttp.payload import BytesIOPayload
 
-from codeboxapi.config import settings
-from codeboxapi.errors import CodeBoxError
+from .config import settings
+from .errors import CodeBoxError
 
 
 def build_request_data(
@@ -23,9 +23,9 @@ def build_request_data(
     """
     return {
         "method": method,
-        "url": settings.CODEBOX_BASE_URL + endpoint,
+        "url": settings.base_url + endpoint,
         "headers": {
-            "Authorization": f"Bearer {settings.CODEBOX_API_KEY}",
+            "Authorization": f"Bearer {settings.api_key}",
         },
         "json": body,
         "files": files,
@@ -50,7 +50,7 @@ def handle_response(response: requests.Response):
     if response.status_code != 200:
         raise CodeBoxError(
             http_status=response.status_code,
-            json_body=response.json(),
+            content=response.content.decode(),
             headers=dict(response.headers.items()),
         )
     return handler(response)
@@ -70,21 +70,26 @@ async def handle_response_async(response: ClientResponse) -> dict:
             "name": r.headers["Content-Disposition"].split("=")[1],
         }
 
+    async def text_handler(r: ClientResponse) -> dict:
+        return {"content": await r.text()}
+
     async def default_handler(r: ClientResponse) -> dict:
         return {"content": await r.text()}
 
     handlers = {
         "application/json": json_handler,
         "application/octet-stream": file_handler,
+        "text/plain": text_handler,
         # Add other content type handlers here
     }
     handler = handlers.get(
         response.headers["Content-Type"].split(";")[0], default_handler
     )
     if response.status != 200:
+        error_content = await handler(response)
         raise CodeBoxError(
             http_status=response.status,
-            json_body=await response.json(),
+            content=str(error_content),
             headers=dict(response.headers.items()),
         )
     return await handler(response)
@@ -139,4 +144,4 @@ def set_api_key(api_key: str) -> None:
     """
     Manually set the CODEBOX_API_KEY.
     """
-    settings.CODEBOX_API_KEY = api_key
+    settings.api_key = api_key
