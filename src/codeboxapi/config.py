@@ -3,13 +3,7 @@ CodeBox API Config:
 Automatically loads environment variables from .env file
 """
 
-from typing import Optional
-
-from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
-
-# .env file
-load_dotenv("./.env")
 
 
 class CodeBoxSettings(BaseSettings):
@@ -17,12 +11,17 @@ class CodeBoxSettings(BaseSettings):
     CodeBox API Config
     """
 
-    VERBOSE: bool = False
-    SHOW_INFO: bool = True
+    verbose: bool = False
+    show_info: bool = True
 
-    CODEBOX_API_KEY: Optional[str] = None
-    CODEBOX_BASE_URL: str = "https://codeboxapi.com/api/v1"
-    CODEBOX_TIMEOUT: int = 20
+    api_key: str = "local"
+    base_url: str = "https://codeboxapi.com/api/v1"
+    timeout: int = 20
+
+    class Config:
+        env_file = ".env"
+        env_prefix = "CODEBOX_"
+        ignore_extra = True
 
 
 settings = CodeBoxSettings()
