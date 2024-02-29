@@ -1,6 +1,6 @@
 [project]
 name = "codeboxapi"
-version = "0.1.19"
+version = "0.2.0"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
 keywords = [
     "codebox",
@@ -17,7 +17,6 @@ dependencies = [
     "pydantic-settings>=2",
     "requests>=2",
     "aiohttp>=3.9",
-    "websockets>=12",
 ]
 readme = "README.md"
 requires-python = ">= 3.9"
@@ -44,13 +43,16 @@ dev-dependencies = [
     "mkdocs-material>=9",
     "types-requests>=2.31",
     "matplotlib>=3.8.2",
+    "jupyter-client>=8.6.0",
+    "ipykernel>=6.29.3",
     "pip",
+    "rich>=13.7.0",
 ]
 
 [project.optional-dependencies]
-all = ["jupyter-kernel-gateway>=2.5, <3", "Pillow>=10"]
-local_support = ["jupyter-kernel-gateway>=2.5, <3"]
-image_support = ["Pillow>=10"]
+local = ["jupyter-client", "ipykernel"]
+image = ["Pillow"]
+all = ["codeboxapi[local]", "codeboxapi[image]"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
