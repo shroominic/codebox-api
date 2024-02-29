@@ -12,18 +12,20 @@ class CodeBoxError(Exception):
     def __init__(
         self,
         http_status: int = 0,
-        json_body: dict = {},
+        content: str = "error",
         headers: dict = {},
+        body: dict = {},
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.http_status = http_status
-        self.json_body = json_body
+        self.content = content
         self.headers = headers
+        self.body = body
 
     def __str__(self):
-        return f"{self.http_status}: {self.json_body}"
+        return f"{self.http_status}: {self.content}"
 
     def __repr__(self):
-        return f"<CodeBoxError {self.http_status}: {self.json_body}>"
+        return f"<CodeBoxError {self.http_status}: {self.content}>"
