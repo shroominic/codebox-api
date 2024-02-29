@@ -5,9 +5,9 @@ The `LocalBox` class is used to run code in a local testing environment. The
 `CodeBox` class is used to run code in a remote sandboxed environment.
 """
 
-from .basebox import BaseBox
-from .codebox import CodeBox
-from .localbox import LocalBox
+from .base import BaseBox
+from .local import LocalBox
+from .remote import RemoteBox as CodeBox
 
 __all__ = [
     "BaseBox",
