@@ -17,7 +17,7 @@ with CodeBox() as codebox:
     file_path = Path("examples/assets/dataset_code.txt")
 
     # run the code
-    output = codebox.run(file_path=file_path)
+    output = codebox.run(code=file_path)
     print(output.type)
 
     if output.type == "image/png" and os.environ.get("CODEBOX_TEST") == "False":
