@@ -8,14 +8,15 @@ this is the default CodeBox.
 import asyncio
 import os
 import subprocess
+from asyncio import sleep as asleep
 from importlib.metadata import PackageNotFoundError, distribution
 from os import PathLike
 from queue import Queue
 from threading import Thread
+from time import sleep
 from typing import AsyncGenerator, Generator, List, Optional, Union
 
 from jupyter_client.manager import KernelManager
-from rich import print
 
 from ..box import BaseBox
 from ..config import settings
@@ -71,7 +72,9 @@ class LocalBox(BaseBox):
         self._check_installed()
         os.makedirs(".codebox", exist_ok=True)
         if not await self.kernel._async_is_alive():
-            self.kernel = KernelManager()
+            self.kernel = KernelManager(
+                ip=os.getenv("LOCALHOST", "127.0.0.1"),
+            )
         await self.kernel._async_start_kernel()
         return CodeBoxStatus(status="started")
 
@@ -85,6 +88,9 @@ class LocalBox(BaseBox):
 
     def run(self, code: Union[str, PathLike]) -> CodeBoxOutput:
         code = self._resolve_pathlike(code)
+
+        if settings.verbose:
+            print(f"\033[90m{code}\033[0m")
 
         msg_stream = []
         self.kernel.client().execute_interactive(
@@ -309,10 +315,12 @@ class LocalBox(BaseBox):
 
     def restart(self) -> CodeBoxStatus:
         self.kernel.restart_kernel()
+        sleep(3)
         return CodeBoxStatus(status="restarted")
 
     async def arestart(self) -> CodeBoxStatus:
         await self.kernel._async_restart_kernel()
+        await asleep(3)
         return CodeBoxStatus(status="restarted")
 
     def stop(self) -> CodeBoxStatus:
