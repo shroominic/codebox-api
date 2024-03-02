@@ -1,4 +1,4 @@
-""" Utility functions for API requests """
+"""Utility functions for API requests"""
 
 import json
 from io import BytesIO
