@@ -48,10 +48,11 @@ class LocalBox(BaseBox):
         os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
         super().__init__(session_id=kwargs.pop("session_id", "local"))
         self.kernel = KernelManager()
+        self.cwd = settings.default_working_dir
 
     def start(self) -> CodeBoxStatus:
         self._check_installed()
-        os.makedirs(".codebox", exist_ok=True)
+        os.makedirs(self.cwd, exist_ok=True)
         if not self.kernel.is_alive():
             self.kernel = KernelManager()
         self.kernel.start_kernel()
@@ -70,7 +71,7 @@ class LocalBox(BaseBox):
 
     async def astart(self) -> CodeBoxStatus:
         self._check_installed()
-        os.makedirs(".codebox", exist_ok=True)
+        os.makedirs(self.cwd, exist_ok=True)
         if not await self.kernel._async_is_alive():
             self.kernel = KernelManager(
                 ip=os.getenv("LOCALHOST", "127.0.0.1"),
@@ -274,8 +275,8 @@ class LocalBox(BaseBox):
             yield CodeBoxOutput(type="error", content="Command execution failed")
 
     def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
-        os.makedirs(".codebox", exist_ok=True)
-        with open(os.path.join(".codebox", file_name), "wb") as f:
+        os.makedirs(self.cwd, exist_ok=True)
+        with open(os.path.join(self.cwd, file_name), "wb") as f:
             f.write(content)
 
         return CodeBoxStatus(status=f"{file_name} uploaded successfully")
@@ -284,7 +285,7 @@ class LocalBox(BaseBox):
         return await asyncio.to_thread(self.upload, file_name, content)
 
     def download(self, file_name: str) -> CodeBoxFile:
-        with open(os.path.join(".codebox", file_name), "rb") as f:
+        with open(os.path.join(self.cwd, file_name), "rb") as f:
             content = f.read()
 
         return CodeBoxFile(name=file_name, content=content)
@@ -307,7 +308,7 @@ class LocalBox(BaseBox):
     def list_files(self) -> List[CodeBoxFile]:
         return [
             CodeBoxFile(name=file_name, content=None)
-            for file_name in os.listdir(".codebox")
+            for file_name in os.listdir(self.cwd)
         ]
 
     async def alist_files(self) -> List[CodeBoxFile]:
