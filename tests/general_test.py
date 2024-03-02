@@ -82,5 +82,5 @@ async def run_async(codebox: CodeBox) -> bool:
 
 
 if __name__ == "__main__":
-    # test_codebox()
-    test_localbox()
+    test_codebox()
+    # test_localbox()
