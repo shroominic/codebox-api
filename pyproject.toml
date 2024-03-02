@@ -63,5 +63,9 @@ packages = ["src/codeboxapi"]
 [tool.pytest.ini_options]
 filterwarnings = "ignore::DeprecationWarning"
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "I"]
+ignore = ["E701"]
+
+[tool.ruff.format]
+preview = true
