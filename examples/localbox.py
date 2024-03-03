@@ -1,6 +1,7 @@
-from codeboxapi.box import LocalBox
+from codeboxapi import CodeBox
 
-with LocalBox() as box:
-    box.run("print('Hello, world!')")
-    box.install("pandas")
-    v = box.run("pandas.__version__")
+with CodeBox() as box:
+    v = box.install("pandas")
+    print(v)
+    r = box.run("import pandas; pandas.__version__")
+    print(r)
