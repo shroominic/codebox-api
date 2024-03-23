@@ -22,12 +22,10 @@ async def run_examples():
     if os.environ.get("CODEBOX_API_KEY") is None:
         return print("Skipping remote examples because CODEBOX_API_KEY is not set")
 
-    await asyncio.gather(
-        *[
-            asyncio.create_task(run_example(file))
-            for file in list(Path("examples").glob("**/*.py"))
-        ]
-    )
+    await asyncio.gather(*[
+        asyncio.create_task(run_example(file))
+        for file in list(Path("examples").glob("**/*.py"))
+    ])
 
 
 async def run_examples_local():
