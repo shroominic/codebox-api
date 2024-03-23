@@ -22,7 +22,7 @@ class CodeBoxSettings(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "CODEBOX_"
-        ignore_extra = True
+        extra = "ignore"
 
 
 settings = CodeBoxSettings()
