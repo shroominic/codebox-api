@@ -7,10 +7,12 @@ The `LocalBox` class is used to run code in a local testing environment. The
 
 from .base import BaseBox
 from .local import LocalBox
+from .remote import RemoteBox
 from .remote import RemoteBox as CodeBox
 
 __all__ = [
     "BaseBox",
     "CodeBox",
     "LocalBox",
+    "RemoteBox",
 ]

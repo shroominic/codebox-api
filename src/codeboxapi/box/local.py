@@ -14,7 +14,7 @@ from os import PathLike
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import AsyncGenerator, Generator, List, Optional, Union
+from typing import AsyncGenerator, Generator, List, Literal, Optional, Union
 
 from jupyter_client.manager import KernelManager
 
@@ -87,7 +87,11 @@ class LocalBox(BaseBox):
             status="running" if await self.kernel._async_is_alive() else "stopped"
         )
 
-    def run(self, code: Union[str, PathLike]) -> CodeBoxOutput:
+    def run(
+        self,
+        code: Union[str, PathLike],
+        engine: Literal["python", "shell"] = "python",
+    ) -> CodeBoxOutput:
         code = self._resolve_pathlike(code)
 
         if settings.verbose:
