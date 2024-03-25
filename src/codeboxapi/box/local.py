@@ -296,7 +296,7 @@ class LocalBox(BaseBox):
         return await asyncio.to_thread(self.download, file_name)
 
     def install(self, package_name: str) -> CodeBoxStatus:
-        if "ERROR" in str(logs := self.run(f"!uv pip install {package_name}")):
+        if "ERROR" in str(logs := self.run(f"!pip install {package_name}")):
             return CodeBoxStatus(status="Error: " + logs.content)
         self.restart()
         if "No module named" in str(
@@ -308,7 +308,7 @@ class LocalBox(BaseBox):
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
-        if "ERROR" in str(logs := await self.arun(f"!uv pip install {package_name}")):
+        if "ERROR" in str(logs := await self.arun(f"!pip install {package_name}")):
             return CodeBoxStatus(status="Error: " + logs.content)
         await self.arestart()
         if "No module named" in str(
