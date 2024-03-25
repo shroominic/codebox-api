@@ -14,7 +14,7 @@ from os import PathLike
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import AsyncGenerator, Generator, List, Literal, Optional, Union
+from typing import AsyncGenerator, Generator, List, Optional, Union
 
 from jupyter_client.manager import KernelManager
 
@@ -54,7 +54,9 @@ class LocalBox(BaseBox):
         self._check_installed()
         os.makedirs(self.cwd, exist_ok=True)
         if not self.kernel.is_alive():
-            self.kernel = KernelManager()
+            self.kernel = KernelManager(
+                ip=os.getenv("LOCALHOST", "127.0.0.1"),
+            )
         self.kernel.start_kernel()
         return CodeBoxStatus(status="started")
 
@@ -87,11 +89,7 @@ class LocalBox(BaseBox):
             status="running" if await self.kernel._async_is_alive() else "stopped"
         )
 
-    def run(
-        self,
-        code: Union[str, PathLike],
-        engine: Literal["python", "shell"] = "python",
-    ) -> CodeBoxOutput:
+    def run(self, code: Union[str, PathLike]) -> CodeBoxOutput:
         code = self._resolve_pathlike(code)
 
         if settings.verbose:
@@ -298,15 +296,27 @@ class LocalBox(BaseBox):
         return await asyncio.to_thread(self.download, file_name)
 
     def install(self, package_name: str) -> CodeBoxStatus:
-        self.run(f"!pip install -q {package_name}")
+        if "ERROR" in str(logs := self.run(f"!uv pip install {package_name}")):
+            return CodeBoxStatus(status="Error: " + logs.content)
         self.restart()
-        self.run(f"try:\n    import {package_name}\nexcept:\n    pass")
+        if "No module named" in str(
+            logs := self.run(
+                f"try:\n    import {package_name}\nexcept Exception as e:\n    print(e)"
+            )
+        ):
+            return CodeBoxStatus(status="Error: " + logs.content)
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
-        await self.arun(f"!pip install -q {package_name}")
+        if "ERROR" in str(logs := await self.arun(f"!uv pip install {package_name}")):
+            return CodeBoxStatus(status="Error: " + logs.content)
         await self.arestart()
-        await self.arun(f"try:\n    import {package_name}\nexcept:\n    pass")
+        if "No module named" in str(
+            logs := await self.arun(
+                f"try:\n    import {package_name}\nexcept Exception as e:\n    print(e)"
+            )
+        ):
+            return CodeBoxStatus(status="Error: " + logs.content)
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     def list_files(self) -> List[CodeBoxFile]:
