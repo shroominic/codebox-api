@@ -21,15 +21,17 @@ def run_sync(codebox: CodeBox) -> bool:
 
         assert codebox.status() == "running"
 
-        assert codebox.run("print('Hello World!')") == "Hello World!\n"
+        codebox.run("x = 'Hello World!'")
+
+        assert codebox.run("print(x)") == "Hello World!\n"
 
         file_name = "test_file.txt"
         assert file_name in str(codebox.upload(file_name, b"Hello World!"))
 
         assert codebox.download(file_name).content == b"Hello World!"
 
-        package_name = "matplotlib"
-        assert package_name in str(codebox.install(package_name))
+        assert "matplotlib" in str(codebox.install("matplotlib"))
+
         assert (
             "error"
             != codebox.run("import matplotlib; print(matplotlib.__version__)").type
@@ -51,17 +53,18 @@ async def run_async(codebox: CodeBox) -> bool:
     try:
         assert await codebox.astart() == "started"
 
+        print(await codebox.astatus())
         assert await codebox.astatus() == "running"
 
-        assert await codebox.arun("print('Hello World!')") == "Hello World!\n"
+        await codebox.arun("x = 'Hello World!'")
+        assert await codebox.arun("print(x)") == "Hello World!\n"
 
         file_name = "test_file.txt"
         assert file_name in str(await codebox.aupload(file_name, b"Hello World!"))
 
         assert (await codebox.adownload(file_name)).content == b"Hello World!"
 
-        package_name = "matplotlib"
-        assert package_name in str(await codebox.ainstall(package_name))
+        assert "matplotlib" in str(await codebox.ainstall("matplotlib"))
         assert (
             "error"
             != (
