@@ -33,7 +33,9 @@ Usage
 
 """
 
+from asyncio import sleep as asleep
 from os import PathLike
+from time import sleep
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
@@ -90,8 +92,7 @@ class RemoteBox(BaseBox):
     ) -> Dict[str, Any]:
         """General async request to the CodeBox API"""
         self._update()
-        if self.aiohttp_session is None:
-            self.aiohttp_session = ClientSession()
+        self.aiohttp_session = self.aiohttp_session or ClientSession()
         # temp fix
         session_id = UUID(self.session_id).int
         return await abase_request(
@@ -110,7 +111,13 @@ class RemoteBox(BaseBox):
 
     def start(self) -> CodeBoxStatus:
         if self.session_id != self._temp_id_cache:
-            return CodeBoxStatus(status="started")
+            print(
+                "if self.session_id != self._temp_id_cache: "
+                f"{self.session_id} != {self._temp_id_cache}"
+            )
+            while self.status().status == "starting":
+                sleep(1)
+            return self.status()
         self.session_id = UUID(
             int=base_request(
                 method="GET",
@@ -120,9 +127,15 @@ class RemoteBox(BaseBox):
         return CodeBoxStatus(status="started")
 
     async def astart(self) -> CodeBoxStatus:
-        self.aiohttp_session = ClientSession()
+        self.aiohttp_session = self.aiohttp_session or ClientSession()
         if self.session_id != self._temp_id_cache:
-            return CodeBoxStatus(status="started")
+            print(
+                "if self.session_id != self._temp_id_cache: "
+                f"{self.session_id} != {self._temp_id_cache}"
+            )
+            while self.status().status == "starting":
+                await asleep(1)
+            return await self.astatus()
         self.session_id = UUID(
             int=(
                 await abase_request(
