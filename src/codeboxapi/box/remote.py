@@ -133,7 +133,7 @@ class RemoteBox(BaseBox):
                 "if self.session_id != self._temp_id_cache: "
                 f"{self.session_id} != {self._temp_id_cache}"
             )
-            while self.status().status == "starting":
+            while (await self.astatus()).status == "starting":
                 await asleep(1)
             return await self.astatus()
         self.session_id = UUID(
