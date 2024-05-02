@@ -1,4 +1,4 @@
-""" Utility functions for API requests """
+"""Utility functions for API requests"""
 
 import json
 from io import BytesIO
@@ -78,15 +78,20 @@ async def handle_response_async(response: ClientResponse) -> dict:
         "application/octet-stream": file_handler,
         # Add other content type handlers here
     }
+    if response.status != 200:
+        try:
+            json_body = await response.json()
+        except Exception:
+            json_body = {"": await response.text()}
+
+        raise CodeBoxError(
+            http_status=response.status,
+            json_body=json_body,
+            headers=dict(response.headers.items()),
+        )
     handler = handlers.get(
         response.headers["Content-Type"].split(";")[0], default_handler
     )
-    if response.status != 200:
-        raise CodeBoxError(
-            http_status=response.status,
-            json_body=await response.json(),
-            headers=dict(response.headers.items()),
-        )
     return await handler(response)
 
 
