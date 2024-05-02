@@ -18,8 +18,10 @@ def test_localbox():
 def run_sync(codebox: CodeBox) -> bool:
     try:
         assert codebox.start() == "started"
+        print(codebox.status())
 
         assert codebox.status() == "running"
+        print(codebox.status())
 
         codebox.run("x = 'Hello World!'")
 
@@ -52,9 +54,10 @@ def run_sync(codebox: CodeBox) -> bool:
 async def run_async(codebox: CodeBox) -> bool:
     try:
         assert await codebox.astart() == "started"
-
         print(await codebox.astatus())
+
         assert await codebox.astatus() == "running"
+        print(await codebox.astatus())
 
         await codebox.arun("x = 'Hello World!'")
         assert await codebox.arun("print(x)") == "Hello World!\n"

@@ -84,7 +84,10 @@ class RemoteBox(BaseBox):
         # temp fix
         session_id = UUID(self.session_id).int
         return base_request(
-            method, f"/codebox/{session_id}" + endpoint, *args, **kwargs
+            method,
+            f"/codebox/{session_id}" + endpoint,
+            *args,
+            **kwargs,
         )
 
     async def acodebox_request(
@@ -111,10 +114,6 @@ class RemoteBox(BaseBox):
 
     def start(self) -> CodeBoxStatus:
         if self.session_id != self._temp_id_cache:
-            print(
-                "if self.session_id != self._temp_id_cache: "
-                f"{self.session_id} != {self._temp_id_cache}"
-            )
             while self.status().status == "starting":
                 sleep(1)
             return self.status()
@@ -129,10 +128,6 @@ class RemoteBox(BaseBox):
     async def astart(self) -> CodeBoxStatus:
         self.aiohttp_session = self.aiohttp_session or ClientSession()
         if self.session_id != self._temp_id_cache:
-            print(
-                "if self.session_id != self._temp_id_cache: "
-                f"{self.session_id} != {self._temp_id_cache}"
-            )
             while (await self.astatus()).status == "starting":
                 await asleep(1)
             return await self.astatus()
