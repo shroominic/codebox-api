@@ -96,7 +96,7 @@ class LocalBox(BaseBox):
             print(f"\033[90m{code}\033[0m")
 
         msg_stream = []
-        self.kernel.client().execute_interactive(
+        self.kernel.client().execute_interactive(  # type: ignore
             code, output_hook=lambda msg: msg_stream.append(msg)
         )
         return self._parse_messages(msg_stream)
@@ -223,10 +223,10 @@ class LocalBox(BaseBox):
                 return CodeBoxOutput(type="error", content=error)
         return CodeBoxOutput(type="error", content="No output")
 
-    def shell(self, cmd: str) -> CodeBoxOutput:
+    def shell(self, *cmd: str) -> CodeBoxOutput:
         try:
             result = subprocess.run(
-                cmd,
+                " ".join(cmd),
                 shell=True,
                 check=True,
                 stdout=subprocess.PIPE,
@@ -237,10 +237,10 @@ class LocalBox(BaseBox):
         except subprocess.CalledProcessError as e:
             return CodeBoxOutput(type="error", content=e.stderr)
 
-    async def ashell(self, cmd: str) -> CodeBoxOutput:
+    async def ashell(self, *cmd: str) -> CodeBoxOutput:
         try:
             process = await asyncio.create_subprocess_shell(
-                cmd,
+                " ".join(cmd),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -252,9 +252,13 @@ class LocalBox(BaseBox):
         except Exception as e:
             return CodeBoxOutput(type="error", content=str(e))
 
-    def shell_stream(self, cmd: str) -> Generator[CodeBoxOutput, None, None]:
+    def shell_stream(self, *cmd: str) -> Generator[CodeBoxOutput, None, None]:
         process = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            " ".join(cmd),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
         )
         if process.stdout:
             for line in process.stdout:
@@ -263,9 +267,9 @@ class LocalBox(BaseBox):
         if process.returncode != 0:
             yield CodeBoxOutput(type="error", content="Command execution failed")
 
-    async def ashell_stream(self, cmd: str) -> AsyncGenerator[CodeBoxOutput, None]:
+    async def ashell_stream(self, *cmd: str) -> AsyncGenerator[CodeBoxOutput, None]:
         process = await asyncio.create_subprocess_shell(
-            cmd,
+            " ".join(cmd),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
@@ -295,29 +299,41 @@ class LocalBox(BaseBox):
     async def adownload(self, file_name: str) -> CodeBoxFile:
         return await asyncio.to_thread(self.download, file_name)
 
-    def install(self, package_name: str) -> CodeBoxStatus:
-        if "ERROR" in str(logs := self.run(f"!pip install {package_name}")):
-            return CodeBoxStatus(status="Error: " + logs.content)
+    def install(self, *package_names: str) -> CodeBoxStatus:
+        packages = " ".join(package_names)
+        if "bin/uv" in self.shell("which uv").content:
+            out = self.shell("uv pip install", packages)
+        else:
+            out = self.shell("pip install", packages)
+
+        if out.type == "error":
+            return CodeBoxStatus(status="Error: " + out.content)
         self.restart()
         if "No module named" in str(
             logs := self.run(
-                f"try:\n    import {package_name}\nexcept Exception as e:\n    print(e)"
+                f"try:\n    import {packages}\nexcept Exception as e:\n    print(e)"
             )
         ):
             return CodeBoxStatus(status="Error: " + logs.content)
-        return CodeBoxStatus(status=f"{package_name} installed successfully")
+        return CodeBoxStatus(status=f"{packages} installed successfully")
 
-    async def ainstall(self, package_name: str) -> CodeBoxStatus:
-        if "ERROR" in str(logs := await self.arun(f"!pip install {package_name}")):
-            return CodeBoxStatus(status="Error: " + logs.content)
+    async def ainstall(self, *package_names: str) -> CodeBoxStatus:
+        packages = " ".join(package_names)
+        if "bin/uv" in (await self.arun("which uv")).content:
+            out = await self.arun(f"uv pip install {packages}")
+        else:
+            out = await self.arun(f"pip install {packages}")
+
+        if out.type == "error":
+            return CodeBoxStatus(status="Error: " + out.content)
         await self.arestart()
         if "No module named" in str(
             logs := await self.arun(
-                f"try:\n    import {package_name}\nexcept Exception as e:\n    print(e)"
+                f"try:\n    import {packages}\nexcept Exception as e:\n    print(e)"
             )
         ):
             return CodeBoxStatus(status="Error: " + logs.content)
-        return CodeBoxStatus(status=f"{package_name} installed successfully")
+        return CodeBoxStatus(status=f"{packages} installed successfully")
 
     def list_files(self) -> List[CodeBoxFile]:
         return [
