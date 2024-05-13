@@ -57,7 +57,7 @@ class LocalBox(BaseBox):
             self.kernel = KernelManager(
                 ip=os.getenv("LOCALHOST", "127.0.0.1"),
             )
-        self.kernel.start_kernel()
+        self.kernel.start_kernel(cwd=self.cwd)
         return CodeBoxStatus(status="started")
 
     def _check_installed(self) -> None:
@@ -78,7 +78,7 @@ class LocalBox(BaseBox):
             self.kernel = KernelManager(
                 ip=os.getenv("LOCALHOST", "127.0.0.1"),
             )
-        await self.kernel._async_start_kernel()
+        await self.kernel._async_start_kernel(cwd=self.cwd)
         return CodeBoxStatus(status="started")
 
     def status(self) -> CodeBoxStatus:
