@@ -26,7 +26,10 @@ def run_sync(codebox: CodeBox) -> bool:
         file_name = "test_file.txt"
         assert file_name in str(codebox.upload(file_name, b"Hello World!"))
 
-        assert file_name in str(codebox.run("import os;\nprint(os.listdir(os.getcwd())); "))
+        assert file_name in str(
+            codebox.run("import os;\nprint(os.listdir(os.getcwd())); ")
+        )
+        assert file_name in str(codebox.list_files())
 
         assert codebox.download(file_name).content == b"Hello World!"
 
@@ -60,7 +63,11 @@ async def run_async(codebox: CodeBox) -> bool:
         file_name = "test_file.txt"
         assert file_name in str(await codebox.aupload(file_name, b"Hello World!"))
 
-        assert file_name in str(await codebox.arun("import os;\nprint(os.listdir(os.getcwd())); ") )
+        assert file_name in str(
+            await codebox.arun("import os;\nprint(os.listdir(os.getcwd())); ")
+        )
+
+        assert file_name in str(codebox.list_files())
 
         assert (await codebox.adownload(file_name)).content == b"Hello World!"
 
