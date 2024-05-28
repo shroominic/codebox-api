@@ -43,6 +43,7 @@ dev-dependencies = [
     "types-requests>=2.31",
     "matplotlib>=3.8.2",
     "pip",
+    "pytest-asyncio>=0.23.7",
 ]
 
 [project.optional-dependencies]

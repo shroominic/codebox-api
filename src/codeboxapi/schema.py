@@ -53,6 +53,14 @@ class CodeBoxFile(BaseModel):
     name: str
     content: Optional[bytes] = None
 
+    @classmethod
+    def from_path(cls, path: str) -> "CodeBoxFile":
+        if not path.startswith("/"):
+            path = f"./{path}"
+        with open(path, "rb") as f:
+            path = path.split("/")[-1]
+            return cls(name=path, content=f.read())
+
     def __str__(self):
         return self.name
 

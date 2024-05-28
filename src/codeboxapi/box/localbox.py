@@ -536,15 +536,17 @@ class LocalBox(BaseBox):
         return await asyncio.to_thread(self.download, file_name)
 
     def install(self, package_name: str) -> CodeBoxStatus:
-        self.run(f"!pip install -q {package_name}")
-        self.restart()
-        self.run(f"try:\n    import {package_name}\nexcept:\n    pass")
+        result = self.run(f"!pip install -q {package_name}")
+        if result.type == "error":
+            raise RuntimeError(f"Failed to install {package_name}")
+
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     async def ainstall(self, package_name: str) -> CodeBoxStatus:
-        await self.arun(f"!pip install -q {package_name}")
-        await self.arestart()
-        await self.arun(f"try:\n    import {package_name}\nexcept:\n    pass")
+        result = await self.arun(f"!pip install -q {package_name}")
+        if result.type == "error":
+            raise RuntimeError(f"Failed to install {package_name}")
+
         return CodeBoxStatus(status=f"{package_name} installed successfully")
 
     def list_files(self) -> List[CodeBoxFile]:

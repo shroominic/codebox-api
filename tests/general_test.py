@@ -26,6 +26,8 @@ def run_sync(codebox: CodeBox) -> bool:
         file_name = "test_file.txt"
         assert file_name in str(codebox.upload(file_name, b"Hello World!"))
 
+        assert file_name in str(codebox.run("import os;\nprint(os.listdir(os.getcwd())); "))
+
         assert codebox.download(file_name).content == b"Hello World!"
 
         package_name = "matplotlib"
@@ -58,6 +60,8 @@ async def run_async(codebox: CodeBox) -> bool:
         file_name = "test_file.txt"
         assert file_name in str(await codebox.aupload(file_name, b"Hello World!"))
 
+        assert file_name in str(await codebox.arun("import os;\nprint(os.listdir(os.getcwd())); ") )
+
         assert (await codebox.adownload(file_name)).content == b"Hello World!"
 
         package_name = "matplotlib"
@@ -74,7 +78,6 @@ async def run_async(codebox: CodeBox) -> bool:
             "plt.plot([1, 2, 3, 4], [1, 4, 2, 3]); plt.show()"
         )
         assert o.type == "image/png"
-
     finally:
         assert await codebox.astop() == "stopped"
 
