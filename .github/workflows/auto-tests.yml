@@ -1,22 +1,22 @@
-name: 🔁 Pytest ⏳x15
+name: 🔁 Pytest ⏳x60
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: "0 * * * *"
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: eifinger/setup-rye@v1
-      with:
-        enable_cache: true
-        cache_prefix: 'venv-codeboxapi'
-    - name: Sync rye
-      run: rye sync
-    - name: Run Pytest
-      env:
-        CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
-      run: rye run pytest
+      - uses: actions/checkout@v2
+      - uses: eifinger/setup-rye@v1
+        with:
+          enable_cache: true
+          cache_prefix: "venv-codeboxapi"
+      - name: Sync rye
+        run: rye sync
+      - name: Run Pytest
+        env:
+          CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
+        run: rye run pytest
