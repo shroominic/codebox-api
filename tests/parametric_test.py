@@ -116,7 +116,7 @@ async def test_boxes_async(
     num_samples: int,
     local: bool,
     packages: list[str],
-    capsys,
+    capsys: pytest.CaptureFixture,
 ) -> None:
     codeboxes = [CodeBox(local=local) for _ in range(num_samples)]
 
