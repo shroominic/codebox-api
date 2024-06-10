@@ -126,7 +126,7 @@ def base_request(
     request_data = build_request_data(method, endpoint, body, files)
     for attempt in range(retries):
         try:
-            response = requests.request(**request_data, timeout=270)
+            response = requests.request(**request_data, timeout=540)
             return handle_response(response)
         except requests.RequestException as e:
             if attempt < retries - 1:

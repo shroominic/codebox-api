@@ -196,6 +196,8 @@ class CodeBox(BaseBox):
                 method="POST",
                 endpoint="/upload",
                 files={"file": (file_name, content)},
+                retries=5,  # Increase retries for large uploads
+                backoff_factor=0.5  # Increase backoff factor for large uploads
             )
         )
 
