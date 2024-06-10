@@ -4,12 +4,15 @@ from codeboxapi import CodeBox
 
 
 async def main():
-    await asyncio.gather(spawn_codebox() for _ in range(10))
+    await asyncio.gather(*(spawn_codebox() for _ in range(10)))
 
 
 async def spawn_codebox():
     async with CodeBox() as codebox:
-        print(await codebox.arun("print('Hello World!')"))
+        await codebox.arun("a = 'Hello World!'")
+        a = await codebox.arun("a")
+        assert a == "Hello World!"
+        print("Success!")
 
 
 if __name__ == "__main__":
