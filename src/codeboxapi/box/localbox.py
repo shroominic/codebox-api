@@ -516,15 +516,19 @@ class LocalBox(BaseBox):
                     print("Error:\n", error)
                 return CodeBoxOutput(type="error", content=error)
 
-    def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
+    def upload(
+        self, file_name: str, content: bytes, timeout: int = 900
+    ) -> CodeBoxStatus:
         os.makedirs(".codebox", exist_ok=True)
         with open(os.path.join(".codebox", file_name), "wb") as f:
             f.write(content)
 
         return CodeBoxStatus(status=f"{file_name} uploaded successfully")
 
-    async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus:
-        return await asyncio.to_thread(self.upload, file_name, content)
+    async def aupload(
+        self, file_name: str, content: bytes, timeout: int = 900
+    ) -> CodeBoxStatus:
+        return await asyncio.to_thread(self.upload, file_name, content, timeout)
 
     def download(self, file_name: str) -> CodeBoxFile:
         with open(os.path.join(".codebox", file_name), "rb") as f:

@@ -1,4 +1,4 @@
-""" Abstract Base Class for Isolated Execution Environments (CodeBox's) """
+"""Abstract Base Class for Isolated Execution Environments (CodeBox's)"""
 
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -46,11 +46,15 @@ class BaseBox(ABC):
         """Async Execute python code inside the CodeBox instance"""
 
     @abstractmethod
-    def upload(self, file_name: str, content: bytes) -> CodeBoxStatus:
+    def upload(
+        self, file_name: str, content: bytes, timeout: int = 600
+    ) -> CodeBoxStatus:
         """Upload a file as bytes to the CodeBox instance"""
 
     @abstractmethod
-    async def aupload(self, file_name: str, content: bytes) -> CodeBoxStatus:
+    async def aupload(
+        self, file_name: str, content: bytes, timeout: int = 600
+    ) -> CodeBoxStatus:
         """Async Upload a file as bytes to the CodeBox instance"""
 
     @abstractmethod

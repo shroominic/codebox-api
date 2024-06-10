@@ -8,10 +8,6 @@ with CodeBox() as codebox:
     ).content
     codebox.upload("iris.csv", csv_bytes)
 
-    # install openpyxl for excel conversion
-    codebox.install("pandas")
-    codebox.install("openpyxl")
-
     # convert dataset csv to excel
     output = codebox.run(
         "import pandas as pd\n\n"
