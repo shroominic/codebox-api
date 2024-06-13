@@ -45,7 +45,7 @@ with CodeBox() as codebox:
 ## Where to get your api-key?
 
 Checkout the [pricing page](https://codeboxapi.com/pricing) of CodeBoxAPI. By subscribing to a plan,
-you will recieve an account with an api-key.
+you will receive an account with an api-key.
 Bear in mind, we don't have many automations set up right now,
 so you'll need to write an [email](mailto:team@codeboxapi.com) for things like refunds,
 sub cancellations, or upgrades.
