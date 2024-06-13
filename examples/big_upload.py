@@ -34,3 +34,7 @@ with CodeBox() as codebox:
 
     codebox.run("import os")
     print(codebox.run("print(os.listdir())"))
+    print(codebox.run("print([(f, os.path.getsize(f)) for f in os.listdir('.')])"))
+
+    file = codebox.download("data-test.arrow")
+    print(file)
