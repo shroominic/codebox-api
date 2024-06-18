@@ -55,6 +55,9 @@ mse
 
 
 def assert_function_2(output, _):
+    # np.float64(5.179525402166653)\n
+    if "np.float64" in output.content:
+        return 4.0 <= float(output.content.split("(")[1].split(")")[0]) <= 7.0
     return 4.0 <= float(output.content) <= 7.0
 
 
