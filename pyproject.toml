@@ -13,8 +13,8 @@ authors = [{ name = "Shroominic", email = "contact@shroominic.com" }]
 dependencies = [
     "pydantic>=2",
     "pydantic-settings>=2",
-    "requests>=2",
-    "aiohttp>=3.9",
+    "httpx>=0.27.0",
+    "httpx-sse>=0.4.0",     # todo check if really needed
 ]
 readme = "README.md"
 requires-python = ">= 3.9"
@@ -35,16 +35,10 @@ dev-dependencies = [
     "codeboxapi[all]",
     "mypy>=1.8",
     "ruff>=0.1",
-    "pytest>=7.4",
-    "pre-commit>=3.5",
+    "pytest-asyncio>=0.23.7",
+    # docs
     "neoteroi-mkdocs>=1",
     "mkdocs-material>=9",
-    "types-requests>=2.31",
-    "matplotlib>=3.8.2",
-    "jupyter-client>=8.6.0",
-    "ipykernel>=6.29.3",
-    "pip",
-    "rich>=13.7.0",
 ]
 
 [project.optional-dependencies]

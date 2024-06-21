@@ -8,3 +8,4 @@
 site
 .python-version
 requirements-dev.lock
+.aider*

@@ -19,3 +19,5 @@
 [ ] - chromiumbox + vectorbox
 
 [ ] - gitbox
+
+[ ] - seperate .venv for localbox managed by uv
