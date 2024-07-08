@@ -1,10 +1,10 @@
-import requests
+import httpx
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:
     # upload dataset csv
-    csv_bytes = requests.get(
-        "https://archive.ics.uci.edu/" "ml/machine-learning-databases/iris/iris.data"
+    csv_bytes = httpx.get(
+        "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     ).content
     codebox.upload("iris.csv", csv_bytes)
 

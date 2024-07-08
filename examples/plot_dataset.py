@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
 
-import requests
+import httpx
 from codeboxapi import CodeBox
 
 with CodeBox() as codebox:
     # download the iris dataset
-    csv_bytes = requests.get(
+    csv_bytes = httpx.get(
         "https://archive.ics.uci.edu/" "ml/machine-learning-databases/iris/iris.data"
     ).content
 
