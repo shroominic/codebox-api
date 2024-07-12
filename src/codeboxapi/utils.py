@@ -1,193 +1,122 @@
-"""Utility functions for API requests"""
+import signal
+from contextlib import contextmanager
+from functools import reduce
+from importlib.metadata import PackageNotFoundError, distribution
+from os import PathLike
+from typing import AsyncIterator, Iterator, TypeVar
 
-import json
-from asyncio import sleep as asleep
-from io import BytesIO
-from time import sleep
-from typing import Optional
-
-import requests
-from aiohttp import ClientError, ClientResponse, ClientSession, FormData
-from aiohttp.payload import BytesIOPayload
-
+from .codebox import ExecChunk, ExecResult
 from .config import settings
-from .errors import CodeBoxError
 
 
-def build_request_data(
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-) -> dict:
-    """
-    Builds a request data dictionary for the requests library.
-    """
-    return {
-        "method": method,
-        "url": settings.base_url + endpoint,
-        "headers": {
-            "Authorization": f"Bearer {settings.api_key}",
-        },
-        "json": body,
-        "files": files,
-    }
+def resolve_pathlike(file: str | PathLike) -> str:
+    if isinstance(file, PathLike):
+        with open(file, "r") as f:
+            return f.read()
+    return file
 
 
-def handle_response(response: requests.Response):
+T = TypeVar("T")
+
+
+async def collect_async_gen(async_gen: AsyncIterator[T]) -> Iterator[T]:
+    return iter([item async for item in async_gen])
+
+
+def reduce_bytes(async_gen: Iterator[bytes]) -> bytes:
+    return reduce(lambda x, y: x + y, async_gen)
+
+
+def flatten_exec_result(result: ExecResult | Iterator[ExecChunk]) -> ExecResult:
+    if not isinstance(result, ExecResult):
+        result = ExecResult(content=[c for c in result])
+    # todo
+    # remove empty text chunks
+    # merge text chunks
+    # remove empty stream chunks
+    # merge stream chunks
+    # remove empty error chunks
+    # merge error chunks
+    # ...
+    return result
+
+
+async def async_flatten_exec_result(async_gen: AsyncIterator[ExecChunk]) -> ExecResult:
+    return flatten_exec_result(await collect_async_gen(async_gen))
+
+
+def parse_message(msg: dict) -> ExecChunk:
     """
-    Handles a response from the requests library.
+    Parse a message from the Jupyter kernel.
+    The message is a dictionary which is a part of the message stream.
+    The output is a chunk of the execution result.
     """
-    handlers = {
-        "application/json": lambda r: json.loads(r.content.decode()),
-        "application/octet-stream": lambda r: {
-            "content": BytesIO(r.content).read(),
-            "name": r.headers["Content-Disposition"].split("=")[1],
-        },
-        # Add other content type handlers here
-    }
-    handler = handlers.get(
-        response.headers["Content-Type"].split(";")[0], lambda r: r.content.decode()
-    )
-    if response.status_code != 200:
-        raise CodeBoxError(
-            http_status=response.status_code,
-            content=response.content.decode(),
-            headers=dict(response.headers.items()),
+    if msg["msg_type"] == "stream":
+        return ExecChunk(type="stream", content=msg["content"]["text"])
+    elif msg["msg_type"] == "execute_result":
+        return ExecChunk(type="text", content=msg["content"]["data"]["text/plain"])
+    elif msg["msg_type"] == "display_data":
+        if "image/png" in msg["content"]["data"]:
+            return ExecChunk(type="image", content=msg["content"]["data"]["image/png"])
+        if "text/plain" in msg["content"]["data"]:
+            return ExecChunk(type="text", content=msg["data"]["text/plain"])
+        return ExecChunk(type="error", content="Could not parse output")
+    elif msg["msg_type"] == "status" and msg["content"]["execution_state"] == "idle":
+        return ExecChunk(type="text", content="")
+    elif msg["msg_type"] == "error":
+        return ExecChunk(
+            type="error",
+            content=msg["content"]["ename"] + ": " + msg["content"]["evalue"],
         )
-    return handler(response)
-
-
-async def handle_response_async(response: ClientResponse) -> dict:
-    """
-    Handles a response from the aiohttp library.
-    """
-
-    async def json_handler(r: ClientResponse) -> dict:
-        return json.loads(await r.text())
-
-    async def file_handler(r: ClientResponse) -> dict:
-        return {
-            "content": await r.read(),
-            "name": r.headers["Content-Disposition"].split("=")[1],
-        }
-
-    async def text_handler(r: ClientResponse) -> dict:
-        return {"content": await r.text()}
-
-    async def default_handler(r: ClientResponse) -> dict:
-        return {"content": await r.text()}
-
-    handlers = {
-        "application/json": json_handler,
-        "application/octet-stream": file_handler,
-        "text/plain": text_handler,
-        # Add other content type handlers here
-    }
-    if response.status != 200:
-        raise CodeBoxError(
-            http_status=response.status,
-            content=(await response.content.read()).decode(),
-            headers=dict(response.headers.items()),
-        )
-    handler = handlers.get(
-        response.headers["Content-Type"].split(";")[0], default_handler
-    )
-    return await handler(response)
-
-
-def base_request(
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-    retries: int = 3,
-    backoff_factor: float = 0.3,
-) -> dict:
-    """
-    Makes a request to the CodeBox API with retry logic.
-
-    Args:
-    - method: HTTP method as a string.
-    - endpoint: API endpoint as a string.
-    - body: Optional dictionary containing the JSON body.
-    - files: Optional dictionary containing file data.
-    - retries: Maximum number of retries on failure.
-    - backoff_factor: Multiplier for delay between retries (exponential backoff).
-
-    Returns:
-    - A dictionary response from the API.
-    """
-    request_data = build_request_data(method, endpoint, body, files)
-    for attempt in range(retries):
-        try:
-            response = requests.request(**request_data, timeout=270)
-            return handle_response(response)
-        except requests.RequestException as e:
-            if attempt < retries - 1:
-                sleep_time = backoff_factor * (2**attempt)
-                sleep(sleep_time)
-            else:
-                raise e
-    raise CodeBoxError(http_status=500, content="Request Failed. Max retries exceeded")
-
-
-async def abase_request(
-    session: ClientSession,
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-    retries: int = 3,
-    backoff_factor: float = 0.3,
-) -> dict:
-    """
-    Makes an asynchronous request to the CodeBox API with retry functionality.
-
-    Args:
-    - session: The aiohttp ClientSession.
-    - method: HTTP method as a string.
-    - endpoint: API endpoint as a string.
-    - body: Optional dictionary containing the JSON body.
-    - files: Optional dictionary containing file data.
-    - retries: Maximum number of retries on failure.
-    - backoff_factor: Multiplier for delay between retries (exponential backoff).
-
-    Returns:
-    - A dictionary response from the API.
-    """
-    request_data = build_request_data(method, endpoint, body, files)
-    if files is not None:
-        data = FormData()
-        for key, file_tuple in files.items():
-            filename, fileobject = file_tuple[
-                :2
-            ]  # Get the filename and fileobject from the tuple
-            payload = BytesIOPayload(BytesIO(fileobject))
-            data.add_field(
-                key, payload, filename=filename
-            )  # Use the filename from the tuple
-        request_data.pop("files")
-        request_data.pop("json")
-        request_data["data"] = data
     else:
-        request_data.pop("files")
-
-    for attempt in range(retries):
-        try:
-            response = await session.request(**request_data)
-            return await handle_response_async(response)
-        except ClientError as e:
-            if attempt < retries - 1:
-                sleep_time = backoff_factor * (2**attempt)
-                await asleep(sleep_time)
-            else:
-                raise e
-    raise CodeBoxError(http_status=500, content="Request Failed. Max retries exceeded")
+        return ExecChunk(
+            type="error", content="Could not parse output: Unsupported message type"
+        )
 
 
-def set_api_key(api_key: str) -> None:
+def parse_messages(messages: list[dict]) -> ExecResult:
     """
-    Manually set the CODEBOX_API_KEY.
+    Parse a list of messages from the Jupyter kernel.
+    The output is a list of chunks of the execution result.
     """
-    settings.api_key = api_key
+    chunks = []
+    for msg in messages:
+        if chunk := parse_message(msg):
+            chunks.append(chunk)
+    else:
+        chunks.append(
+            ExecChunk(type="text", content="/* exec successful - no output */")
+        )
+    return ExecResult(content=chunks)
+
+
+def check_installed(package: str) -> None:
+    """
+    Check if the given package is installed.
+    """
+    try:
+        distribution(package)
+    except PackageNotFoundError:
+        if settings.debug:
+            print(
+                f"\nMake sure '{package}' is installed "
+                "when using without a CODEBOX_API_KEY.\n"
+                f"You can install it with 'pip install {package}'.\n"
+            )
+        raise
+
+
+@contextmanager
+def raise_timeout(timeout: float | None = None):
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Execution timed out")
+
+    if timeout is not None:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(int(timeout))
+
+    try:
+        yield
+    finally:
+        if timeout is not None:
+            signal.alarm(0)

@@ -6,7 +6,7 @@ The package includes modules for configuring the client, setting the API key,
 and interacting with Codebox instances.
 """
 
-from .box import CodeBox
+from .codebox import CodeBox
 from .config import settings
 
 __all__ = [
