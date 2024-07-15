@@ -80,6 +80,7 @@ async def run_async(codebox: CodeBox) -> bool:
         print("Downloaded")
 
         assert "matplotlib" in str(await codebox.ainstall("matplotlib"))
+
         assert (
             "error"
             != (
@@ -104,4 +105,4 @@ async def run_async(codebox: CodeBox) -> bool:
 
 if __name__ == "__main__":
     test_codebox()
-    # test_localbox()
+    test_localbox()
