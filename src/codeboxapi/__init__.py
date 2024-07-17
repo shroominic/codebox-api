@@ -7,9 +7,5 @@ and interacting with Codebox instances.
 """
 
 from .codebox import CodeBox
-from .config import settings
 
-__all__ = [
-    "CodeBox",
-    "settings",
-]
+__all__ = ["CodeBox"]

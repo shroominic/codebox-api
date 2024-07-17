@@ -11,184 +11,100 @@ Usage
 
     from codeboxapi import CodeBox
 
+    codebox = CodeBox.create(api_key="local")
+
     codebox.healthcheck()
     codebox.exec("print('Hello World!')")
-    codebox.install("matplotlib")
     codebox.upload("test.txt", "This is test file content!")
-    codebox.files()
+    codebox.exec("!pip install matplotlib", kernel="bash")
+    codebox.list_files()
     codebox.download("test.txt")
 
 .. code-block:: python
 
     from codeboxapi import CodeBox
 
-    await codebox.healthcheck()
-    await codebox.exec("print('Hello World!')")
-    await codebox.install("matplotlib")
-    await codebox.upload("test.txt", "This is test file content!")
-    await codebox.files()
-    await codebox.download("test.txt")
+    codebox = CodeBox.create(api_key="local")
+
+    await codebox.ahealthcheck()
+    await codebox.aexec("print('Hello World!')")
+    await codebox.ainstall("matplotlib")
+    await codebox.aupload("test.txt", "This is test file content!")
+    await codebox.alist_files()
+    await codebox.adownload("test.txt")
 
 """
 
-from abc import ABC, abstractmethod
-from functools import partial, wraps
+from importlib import import_module
 from os import PathLike
-from typing import (
-    Any,
-    AsyncGenerator,
-    AsyncIterator,
-    BinaryIO,
-    Callable,
-    Coroutine,
-    Generator,
-    Iterator,
-    Literal,
-    ParamSpec,
-    TypeVar,
-)
-from warnings import warn
+from typing import Any, AsyncGenerator, BinaryIO, Generator, Literal
 
 import anyio
-from pydantic import BaseModel
 
-from . import utils
-
-
-class ExecChunk(BaseModel):
-    type: Literal["text", "image", "stream", "error"]
-    content: str
-
-
-class ExecResult(BaseModel):
-    content: list[ExecChunk]
-
-    @property
-    def text(self) -> str:
-        return "".join(
-            chunk.content
-            for chunk in self.content
-            if chunk.type == "text" or chunk.type == "stream"
-        )
-
-    @property
-    def images(self) -> list[str]:
-        return [chunk.content for chunk in self.content if chunk.type == "image"]
-
-    @property
-    def errors(self) -> list[str]:
-        return [chunk.content for chunk in self.content if chunk.type == "error"]
+from .utils import (
+    CodeBoxFile,
+    CodeBoxOutput,
+    ExecChunk,
+    ExecResult,
+    async_flatten_exec_result,
+    deprecated,
+    flatten_exec_result,
+    syncify,
+)
 
 
-# todo move somewhere more clean
-class CodeBoxOutput(BaseModel):
-    """Deprecated CodeBoxOutput class"""
-
-    content: str
-    type: Literal["stdout", "stderr", "error"]
-
-
-class CodeBoxFile(BaseModel):
-    remote_path: str
-    size: int
-    codebox: "CodeBox"
-    _content: bytes | None = None
-
-    @property
-    def name(self) -> str:
-        return self.remote_path.split("/")[-1]
-
-    @property
-    def content(self) -> bytes:
-        return self._content or b"".join(self.codebox.stream_download(self.remote_path))
-
-    @property
-    async def acontent(self) -> bytes:
-        return self._content or b"".join([
-            chunk async for chunk in self.codebox.astream_download(self.remote_path)
-        ])
-
-    def save(self, path: str) -> None:
-        with open(path, "wb") as f:
-            for chunk in self.codebox.stream_download(self.remote_path):
-                f.write(chunk)
-
-    async def asave(self, path: str) -> None:
-        import aiofiles
-
-        async with aiofiles.open(path, "wb") as f:
-            async for chunk in self.codebox.astream_download(self.remote_path):
-                await f.write(chunk)
-
-
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def deprecated(message: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            warn(
-                f"{func.__name__} is deprecated. {message}",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-class CodeBox(ABC):
-    """CodeBox Abstract Base Class"""
-
-    @classmethod
-    def create(
+class CodeBox:
+    def __new__(
         cls,
-        api_key: str | None = None,
-        factory_id: str | None = None,
+        session_id: str | None = None,
+        api_key: str | Literal["local", "docker"] = "local",
+        factory_id: str | Literal["default"] = "default",
+        **kwargs: Any,
     ) -> "CodeBox":
         """
         Creates a CodeBox session
         """
-        from .local import LocalBox
-        from .remote import RemoteBox
-
         if api_key == "local":
-            return LocalBox()
+            return super().__new__(import_module("codeboxapi.local").LocalBox)
 
         if api_key == "docker":
-            # return DockerBox()
-            raise NotImplementedError("DockerBox is not implemented yet")
+            return super().__new__(import_module("codeboxapi.docker").DockerBox)
 
-        return RemoteBox(factory_id, api_key)
+        return super().__new__(import_module("codeboxapi.remote").RemoteBox)
+
+    def __init__(
+        self,
+        session_id: str | None = None,
+        api_key: str | Literal["local", "docker"] = "local",
+        factory_id: str | Literal["default"] = "default",
+        **_: bool,
+    ) -> None:
+        self.session_id = session_id or "local"
+        self.api_key = api_key
+        self.factory_id = factory_id
 
     # SYNC
 
     def exec(
         self,
         code: str | PathLike,
-        language: Literal["python", "bash"] = "python",
+        kernel: Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ExecResult:
         """Execute python code inside the CodeBox instance"""
-        # todo think about if this maybe better not scripted
-        return utils.flatten_exec_result(self.stream_exec(code, language, timeout, cwd))
+        return flatten_exec_result(self.stream_exec(code, kernel, timeout, cwd))
 
-    @abstractmethod
     def stream_exec(
         self,
         code: str | PathLike,
-        language: Literal["python", "bash"] = "python",
+        kernel: Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> Generator[ExecChunk, None, None]:
         """Stream Chunks of Execute python code inside the CodeBox instance"""
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
-    @abstractmethod
     def upload(
         self,
         remote_file_path: str,
@@ -196,42 +112,40 @@ class CodeBox(ABC):
         timeout: float | None = None,
     ) -> CodeBoxFile:
         """Upload a file to the CodeBox instance"""
+        return syncify(self.aupload)(remote_file_path, content, timeout)
 
-    @abstractmethod
     def stream_download(
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> Iterator[bytes]:
+    ) -> Generator[bytes, None, None]:
         """Download a file as open BinaryIO. Make sure to close the file after use."""
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
     # ASYNC
 
     async def aexec(
         self,
         code: str | PathLike,
-        language: Literal[
-            "python", "bash"
-        ] = "python",  # todo differentiate python and jupyter
+        kernel: Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ExecResult:
         """Async Execute python code inside the CodeBox instance"""
-        return await utils.async_flatten_exec_result(
-            self.astream_exec(code, language, timeout, cwd)
+        return await async_flatten_exec_result(
+            self.astream_exec(code, kernel, timeout, cwd)
         )
 
-    @abstractmethod
     def astream_exec(
         self,
         code: str | PathLike,
-        language: Literal["python", "bash"] = "python",
+        kernel: Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> AsyncGenerator[ExecChunk, None]:
         """Async Stream Chunks of Execute python code inside the CodeBox instance"""
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
-    @abstractmethod
     async def aupload(
         self,
         remote_file_path: str,
@@ -239,37 +153,39 @@ class CodeBox(ABC):
         timeout: float | None = None,
     ) -> CodeBoxFile:
         """Async Upload a file to the CodeBox instance"""
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
     async def adownload(
         self,
         remote_file_path: str,
         timeout: float | None = None,
     ) -> CodeBoxFile:
-        return next(
+        return [
             f for f in (await self.alist_files()) if f.remote_path == remote_file_path
-        )
+        ][0]
 
-    @abstractmethod
     def astream_download(
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes, None]:
         """Async Download a file as BinaryIO. Make sure to close the file after use."""
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
-    # SCRIPTED METHODS
+    # HELPER METHODS
 
     async def ahealthcheck(self) -> Literal["healthy", "error"]:
-        health = (await self.aexec("echo 'ok'", language="bash")).text
-        if health == "ok":
-            return "healthy"
-        return "error"
+        return (
+            "healthy"
+            if "ok" in (await self.aexec("echo ok", kernel="bash")).text
+            else "error"
+        )
 
     async def ainstall(self, *packages: str) -> str:
         # todo make sure it always uses the correct python venv
         await self.aexec(
             "uv pip install " + " ".join(packages),
-            language="bash",
+            kernel="bash",
         )
         return " ".join(packages) + " installed successfully"
 
@@ -277,17 +193,28 @@ class CodeBox(ABC):
         files = (
             await self.aexec(
                 "find . -type f -exec du -h {} + | awk '{print $2, $1}' | sort",
-                language="bash",
+                kernel="bash",
             )
         ).text.splitlines()
         return [
-            CodeBoxFile(remote_path=parts[0], size=int(parts[1]), codebox=self)
+            CodeBoxFile(
+                remote_path=parts[0].removeprefix("./"),
+                size=self._parse_size(parts[1]),
+                codebox_id=self.session_id,
+            )
             for file in files
-            if (parts := file.split()) and len(parts) == 2
+            if (parts := file.split(" ")) and len(parts) == 2
         ]
 
+    def _parse_size(self, size_str: str) -> int:
+        """Convert human-readable size to bytes."""
+        units = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
+        number = float(size_str[:-1])
+        unit = size_str[-1].upper()
+        return int(number * units.get(unit, 1))
+
     async def alist_packages(self) -> list[str]:
-        return (await self.aexec("uv pip list", language="bash")).text.splitlines()
+        return (await self.aexec("uv pip list", kernel="bash")).text.splitlines()
 
     async def alist_variables(self) -> list[str]:
         return (await self.aexec("%who")).text.splitlines()
@@ -295,6 +222,45 @@ class CodeBox(ABC):
     async def arestart(self) -> None:
         """Restart the Jupyter kernel"""
         await self.aexec(r"%restart")
+
+    async def akeep_alive(self, minutes: int = 15) -> None:
+        """Keep the CodeBox instance alive for a certain amount of minutes"""
+
+        async def ping(cb: CodeBox, d: int) -> None:
+            for _ in range(d):
+                await cb.ahealthcheck()
+                await anyio.sleep(60)
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(ping, self, minutes)
+
+    # SYNCIFY
+
+    def download(
+        self, remote_file_path: str, timeout: float | None = None
+    ) -> CodeBoxFile:
+        return syncify(self.adownload)(remote_file_path, timeout)
+
+    def healthcheck(self) -> str:
+        return syncify(self.ahealthcheck)()
+
+    def install(self, *packages: str) -> str:
+        return syncify(self.ainstall)(*packages)
+
+    def list_files(self) -> list[CodeBoxFile]:
+        return syncify(self.alist_files)()
+
+    def list_packages(self) -> list[str]:
+        return syncify(self.alist_packages)()
+
+    def list_variables(self) -> list[str]:
+        return syncify(self.alist_variables)()
+
+    def restart(self) -> None:
+        return syncify(self.arestart)()
+
+    def keep_alive(self, minutes: int = 15) -> None:
+        return syncify(self.akeep_alive)(minutes)
 
     # DEPRECATED
 
@@ -304,7 +270,7 @@ class CodeBox(ABC):
         "The `.start` method is deprecated. Use `.healthcheck` instead."
     )
     async def astart(self) -> Literal["started", "error"]:
-        return "started" if await self.ahealthcheck() == "healthy" else "error"
+        return "started" if (await self.ahealthcheck()) == "healthy" else "error"
 
     @deprecated(
         "The `.stop` method is deprecated. "
@@ -317,8 +283,10 @@ class CodeBox(ABC):
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    async def arun(self, code: str) -> CodeBoxOutput:
-        exec_result = await self.aexec(code, language="python")
+    async def arun(self, code: str | PathLike) -> CodeBoxOutput:
+        exec_result = await self.aexec(code, kernel="ipython")
+        if exec_result.images:
+            return CodeBoxOutput(type="image/png", content=exec_result.images[0])
         return CodeBoxOutput(type="stdout", content=exec_result.text)
 
     @deprecated(
@@ -327,20 +295,28 @@ class CodeBox(ABC):
     async def astatus(self) -> Literal["started", "running", "stopped"]:
         return "running" if await self.ahealthcheck() == "healthy" else "stopped"
 
-    # SYNCIFY
+    @deprecated(
+        "The `.start` method is deprecated. Use `.healthcheck` instead.",
+    )
+    def start(self) -> Literal["started", "error"]:
+        return syncify(self.astart)()
 
-    def __init__(self):
-        def syncify(async_func: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
-            return partial(anyio.run, async_func)
+    @deprecated(
+        "The `.stop` method is deprecated. "
+        "The session will be closed automatically after the last interaction.\n"
+        "(default timeout: 15 minutes)"
+    )
+    def stop(self) -> Literal["stopped"]:
+        return syncify(self.astop)()
 
-        self.healthcheck = syncify(self.ahealthcheck)
-        self.list_files = syncify(self.alist_files)
-        self.list_packages = syncify(self.alist_packages)
-        self.list_variables = syncify(self.alist_variables)
-        self.download = syncify(self.adownload)
-        self.restart = syncify(self.arestart)
-        self.install = syncify(self.ainstall)
-        self.start = syncify(self.astart)
-        self.stop = syncify(self.astop)
-        self.run = syncify(self.arun)
-        self.status = syncify(self.astatus)
+    @deprecated(
+        "The `.run` method is deprecated. Use `.exec` instead.",
+    )
+    def run(self, code: str | PathLike) -> CodeBoxOutput:
+        return syncify(self.arun)(code)
+
+    @deprecated(
+        "The `.status` method is deprecated. Use `.healthcheck` instead.",
+    )
+    def status(self) -> Literal["started", "running", "stopped"]:
+        return syncify(self.astatus)()
