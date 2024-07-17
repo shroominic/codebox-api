@@ -4,25 +4,21 @@ from datetime import datetime, timedelta
 from os import getenv
 from typing import Annotated, AsyncGenerator, Literal
 
-from codeboxapi import CodeBox
-from codeboxapi.codebox import CodeBoxFile
-from codeboxapi.local import LocalBox
-from fastapi import Depends, FastAPI, HTTPException, Path, UploadFile
+from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
-TIMEOUT = float(getenv("TIMEOUT", "900"))
+from .local import LocalBox
+from .utils import CodeBoxFile
 
+codebox = LocalBox()
 last_interaction = datetime.utcnow()
-
-codebox = CodeBox.create(api_key="local")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     async def timeout():
-        # todo maybe mode timeout into LocalBox
-        while last_interaction + timedelta(seconds=TIMEOUT) > datetime.utcnow():
+        timeout_secs = float(getenv("CODEBOX_TIMEOUT", "900"))
+        while last_interaction + timedelta(seconds=timeout_secs) > datetime.utcnow():
             await asyncio.sleep(1)
         exit(0)
 
@@ -34,41 +30,40 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="Codebox API", lifespan=lifespan)
 
 
-async def get_codebox() -> AsyncGenerator[CodeBox, None]:
+async def get_codebox() -> AsyncGenerator[LocalBox, None]:
     global codebox, last_interaction
     last_interaction = datetime.utcnow()
     yield codebox
 
 
-@app.get("/healthcheck")
+@app.get("/")
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
 
 
-class RunCodeInput(BaseModel):
-    code: str
-
-
 @app.post("/exec")
 async def exec(
-    codebox: Annotated[LocalBox, Depends(get_codebox)],
-    code: str,
-    language: Literal["python", "bash"],
+    code: Annotated[str, Body()],
+    kernel: Literal["ipython", "bash"] = "ipython",
     timeout: int | None = None,
     cwd: str | None = None,
+    codebox: LocalBox = Depends(get_codebox),
 ) -> StreamingResponse:
+    print("code", code)
+
     async def event_stream() -> AsyncGenerator[str, None]:
-        async for chunk in codebox.astream_exec(code, language, timeout, cwd):
-            yield chunk.model_dump_json()
+        async for chunk in codebox.astream_exec(code, kernel, timeout, cwd):
+            print("chunk", chunk)
+            yield chunk.__str__()
 
     return StreamingResponse(event_stream())
 
 
 @app.get("/download/{file_name}")
 async def download(
-    codebox: Annotated[LocalBox, Depends(get_codebox)],
-    file_name: Annotated[str, Path()],
+    file_name: str,
     timeout: int | None = None,
+    codebox: LocalBox = Depends(get_codebox),
 ) -> StreamingResponse:
     return StreamingResponse(codebox.astream_download(file_name, timeout))
 
@@ -76,9 +71,15 @@ async def download(
 @app.post("/upload")
 async def upload(
     file: UploadFile,
-    codebox: Annotated[LocalBox, Depends(get_codebox)],
     timeout: int | None = None,
-) -> CodeBoxFile:
+    codebox: LocalBox = Depends(get_codebox),
+) -> "CodeBoxFile":
     if not file.filename:
         raise HTTPException(status_code=400, detail="A file name is required")
     return await codebox.aupload(file.filename, file.file, timeout)
+
+
+def serve():
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=getenv("CODEBOX_PORT", 8069))
