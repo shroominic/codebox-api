@@ -6,211 +6,202 @@ this is the default CodeBox.
 """
 
 import asyncio
+import base64
+import io
 import os
+import re
 import subprocess
-from os import PathLike
-from queue import Queue
-from threading import Thread
-from typing import (
-    AsyncGenerator,
-    AsyncIterator,
-    BinaryIO,
-    Generator,
-    Iterator,
-    Literal,
-    Self,
-    Union,
-)
+import sys
+import typing as t
+from io import StringIO
+from typing import Generator
 
-from jupyter_client.manager import KernelManager
+from IPython.core.interactiveshell import InteractiveShell
 
-from . import utils
 from .codebox import CodeBox, CodeBoxFile, ExecChunk
-from .config import settings
+from .utils import check_installed, raise_timeout, resolve_pathlike
 
 
-# todo implement inactivity timeout to close kernel after 10 minutes of last method call
 class LocalBox(CodeBox):
     """
-    LocalBox is a CodeBox implementation that runs code locally.
+    LocalBox is a CodeBox implementation that runs code locally using IPython.
     This is useful for testing and development.
     """
 
-    _instance: Self | None = None
+    def __new__(cls, *args, **kwargs) -> "LocalBox":
+        # This is a hack to ignore the CodeBox.__new__ factory method.
+        return object.__new__(cls)
 
-    def __new__(cls, *_, **__):
-        if not cls._instance:
-            cls._instance = super().__new__(cls)
-        else:
-            if settings.debug:
-                print(
-                    "INFO: Using a LocalBox which is not fully isolated\n"
-                    "      and not scalable across multiple parallel users.\n"
-                    "      Make sure to use a CODEBOX_API_KEY in production.\n"
-                    "      Set envar CODEBOX_DEBUG=False to not see this again.\n"
-                )
-        return cls._instance
+    def __init__(
+        self,
+        session_id: str | None = None,
+        codebox_cwd: str = ".codebox",
+        **kwargs,
+    ) -> None:
+        self.session_id = session_id or ""
+        os.makedirs(codebox_cwd, exist_ok=True)
+        self.cwd = os.path.abspath(codebox_cwd)
+        os.chdir(self.cwd)
+        check_installed("ipython")
+        self.shell = InteractiveShell.instance()
+        self.shell.enable_gui = lambda x: None  # type: ignore
+        self._patch_matplotlib_show()
 
-    def __init__(self, /, **kwargs) -> None:
-        super().__init__()
-        os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
-        self.kernel = KernelManager()
-        self.cwd = settings.default_working_dir
-        # startup
-        utils.check_installed("jupyter-client")
-        os.makedirs(self.cwd, exist_ok=True)
-        if not self.kernel.is_alive():
-            self.kernel = KernelManager(ip=os.getenv("LOCALHOST", "127.0.0.1"))
-        self.kernel.start_kernel(cwd=self.cwd)
+    def _patch_matplotlib_show(self) -> None:
+        import matplotlib.pyplot as plt
+
+        def custom_show(close=True):
+            fig = plt.gcf()
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png")
+            buf.seek(0)
+            img_str = base64.b64encode(buf.getvalue()).decode("utf-8")
+            print(f"<img src='data:image/png;base64,{img_str}' />")
+            if close:
+                plt.close(fig)
+
+        plt.show = custom_show
 
     def stream_exec(
         self,
-        code: str | PathLike,
-        language: Literal["python", "bash"] = "python",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> Generator[ExecChunk, None, None]:
-        """
-        Creates a Generator that streams chunks of the output of the code execution
-        """
-        code = utils.resolve_pathlike(code)
+    ) -> t.Generator[ExecChunk, None, None]:
+        code = resolve_pathlike(code)
 
-        if language == "python":
-            msg_queue: Queue[dict | None] = Queue()
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        redirected_output = sys.stdout = StringIO()
+        redirected_error = sys.stderr = StringIO()
 
-            def output_hook(msg):
-                msg_queue.put(msg)
+        try:
+            if kernel == "ipython":
+                result = self.shell.run_cell(code)
+                output = redirected_output.getvalue()
+                error = redirected_error.getvalue()
 
-            def execute_code():
-                self.kernel.client().execute_interactive(code, output_hook=output_hook)
-                msg_queue.put(None)
+                if "<img src='data:image/png;base64," in output:
+                    image_pattern = r"<img src='data:image/png;base64,(.*?)' />"
+                    image_matches = re.findall(image_pattern, output)
+                    for img_str in image_matches:
+                        yield ExecChunk(type="image", content=img_str)
+                elif output:
+                    yield ExecChunk(type="text", content=output)
+                if error:
+                    yield ExecChunk(type="error", content=error)
+                if result.result is not None:
+                    yield ExecChunk(type="text", content=str(result.result))
 
-            execution_thread = Thread(target=execute_code)
-            execution_thread.start()
-
-            while True:
-                msg = msg_queue.get()
-                if msg is None:
-                    break
-                yield utils.parse_message(msg)
-
-            execution_thread.join()
-
-        elif language == "bash":
-            with utils.raise_timeout(timeout):
-                process = subprocess.Popen(
-                    code,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-                if process.stdout:
-                    for line in process.stdout:
-                        yield ExecChunk(type="stream", content=line.strip())
-                process.wait()
-                if process.returncode != 0:
-                    yield ExecChunk(type="error", content="Command execution failed")
-        else:
-            raise ValueError(f"Unsupported language: {language}")
-
-    def upload(
-        self,
-        file_name: str,
-        content: BinaryIO | bytes | str,
-        timeout: float | None = None,
-    ) -> CodeBoxFile:
-        with utils.raise_timeout(timeout):
-            file_path = os.path.join(self.cwd, file_name)
-            with open(file_path, "wb") as file:
-                if isinstance(content, str):
-                    file.write(content.encode())
-                elif isinstance(content, BinaryIO):
-                    while chunk := content.read(8192):
-                        file.write(chunk)
-                else:
-                    file.write(content)
-            file_size = os.path.getsize(file_path)
-            return CodeBoxFile(
-                remote_path=file_path,
-                size=file_size,
-                codebox=self,
-            )
-
-    def stream_download(
-        self,
-        file_name: str,
-        timeout: float | None = None,
-    ) -> Iterator[bytes]:
-        with utils.raise_timeout(timeout):
-            with open(os.path.join(self.cwd, file_name), "rb") as file:
-                yield file.read()
+            elif kernel == "bash":
+                try:
+                    process = subprocess.Popen(
+                        code,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        cwd=cwd,
+                    )
+                    try:
+                        stdout, stderr = process.communicate(timeout=timeout)
+                        if stdout:
+                            yield ExecChunk(type="text", content=stdout)
+                        if stderr:
+                            yield ExecChunk(type="error", content=stderr)
+                        if process.returncode != 0:
+                            yield ExecChunk(
+                                type="error",
+                                content="Command failed with "
+                                f"exit code {process.returncode}",
+                            )
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        yield ExecChunk(type="error", content="Command timed out")
+                except Exception as e:
+                    yield ExecChunk(type="error", content=str(e))
+            else:
+                raise ValueError(f"Unsupported kernel: {kernel}")
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
     async def astream_exec(
         self,
-        code: Union[str, PathLike],
-        language: Literal["python", "bash"] = "python",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> AsyncGenerator[ExecChunk, None]:
-        code = utils.resolve_pathlike(code)
+    ) -> t.AsyncGenerator[ExecChunk, None]:
+        code = resolve_pathlike(code)
 
-        if language == "python":
-            msg_queue: asyncio.Queue = asyncio.Queue()
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        redirected_output = sys.stdout = StringIO()
+        redirected_error = sys.stderr = StringIO()
 
-            async def output_hook(msg):
-                await msg_queue.put(msg)
-
-            execution_task = asyncio.create_task(
-                self.kernel.client()._async_execute_interactive(
-                    code, output_hook=output_hook, timeout=timeout
+        try:
+            if kernel == "ipython":
+                result = await self.shell.run_cell_async(
+                    code, store_history=False, silent=True
                 )
-            )
-
-            try:
-                while not execution_task.done() or not msg_queue.empty():
-                    msg = await msg_queue.get()
-                    yield utils.parse_message(msg)
-            finally:
-                if not execution_task.done():
-                    execution_task.cancel()
-                    try:
-                        await execution_task
-                    except asyncio.CancelledError:
-                        pass
-
-        elif language == "bash":
-            async with asyncio.timeout(timeout):
-                process = await asyncio.create_subprocess_shell(
-                    code,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
-                    cwd=cwd,
-                )
-                if process.stdout:
-                    async for line in process.stdout:
-                        yield ExecChunk(type="stream", content=line.decode().strip())
-                await process.wait()
-                if process.returncode != 0:
-                    yield ExecChunk(type="error", content="Command execution failed")
-
-        else:
-            raise ValueError(f"Unsupported language: {language}")
+                output = redirected_output.getvalue()
+                error = redirected_error.getvalue()
+                if "<img src='data:image/png;base64," in output:
+                    image_pattern = r"<img src='data:image/png;base64,(.*?)' />"
+                    image_matches = re.findall(image_pattern, output)
+                    for img_str in image_matches:
+                        yield ExecChunk(type="image", content=img_str)
+                elif output:
+                    yield ExecChunk(type="text", content=output)
+                if error:
+                    yield ExecChunk(type="error", content=error)
+                if result.result is not None:
+                    yield ExecChunk(type="text", content=str(result.result))
+            elif kernel == "bash":
+                try:
+                    process = await asyncio.create_subprocess_shell(
+                        code,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        cwd=cwd,
+                    )
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(), timeout=timeout
+                    )
+                    if stdout:
+                        yield ExecChunk(type="text", content=stdout.decode())
+                    if stderr:
+                        yield ExecChunk(type="error", content=stderr.decode())
+                    if process.returncode != 0:
+                        yield ExecChunk(
+                            type="error",
+                            content="Command failed with "
+                            f"exit code {process.returncode}",
+                        )
+                except asyncio.TimeoutError:
+                    yield ExecChunk(type="error", content="Command timed out")
+            else:
+                raise ValueError(f"Unsupported kernel: {kernel}")
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
     async def aupload(
         self,
         file_name: str,
-        content: BinaryIO | bytes | str,
+        content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
     ) -> CodeBoxFile:
-        import aiofiles
+        import aiofiles.os
 
         async with asyncio.timeout(timeout):
             file_path = os.path.join(self.cwd, file_name)
             async with aiofiles.open(file_path, "wb") as file:
                 if isinstance(content, str):
                     await file.write(content.encode())
-                elif isinstance(content, BinaryIO):
+                elif isinstance(content, t.BinaryIO):
                     while chunk := content.read(8192):
                         await file.write(chunk)
                 else:
@@ -220,14 +211,23 @@ class LocalBox(CodeBox):
             return CodeBoxFile(
                 remote_path=file_path,
                 size=file_size,
-                codebox=self,
+                codebox_id=self.session_id,
             )
+
+    def stream_download(
+        self,
+        remote_file_path: str,
+        timeout: float | None = None,
+    ) -> Generator[bytes, None, None]:
+        with raise_timeout(timeout):
+            with open(os.path.join(self.cwd, remote_file_path), "rb") as f:
+                yield f.read()
 
     async def astream_download(
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> AsyncIterator[bytes]:
+    ) -> t.AsyncGenerator[bytes, None]:
         import aiofiles
 
         async with asyncio.timeout(timeout):
@@ -235,6 +235,3 @@ class LocalBox(CodeBox):
                 os.path.join(self.cwd, remote_file_path), "rb"
             ) as f:
                 yield await f.read()
-
-    def __del__(self):
-        self.kernel.shutdown_kernel()
