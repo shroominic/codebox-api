@@ -8,9 +8,14 @@ keywords = [
     "codebox-api",
     "language model",
     "codeinterpreterapi",
+    "code sandbox",
+    "codebox",
+    "agent infrastructure",
+    "agents",
+    "agent sandbox",
 ]
 authors = [{ name = "Shroominic", email = "contact@shroominic.com" }]
-dependencies = ["pydantic>=2", "pydantic-settings>=2", "httpx>=0.27"]
+dependencies = ["httpx>=0.27"]
 readme = "README.md"
 requires-python = ">= 3.9"
 license = { text = "MIT" }
@@ -30,10 +35,10 @@ dev-dependencies = [
     "codeboxapi[all]",
     "codeboxapi[docs]",
     "codeboxapi[pytest]",
+    "codeboxapi[serve]",
     "ruff",
     "mypy",
     "types-aiofiles>=24",
-    "fastapi>=0.111.0",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +46,7 @@ docs = ["neoteroi-mkdocs", "mkdocs-material"]
 pytest = ["pytest-asyncio"]
 local = ["jupyter-client", "ipykernel", "uv", "aiofiles"]
 vision = ["Pillow"]
+serve = ["fastapi"]
 data-science = [
     "codeboxapi[local]",
     "codeboxapi[vision]",
@@ -67,7 +73,10 @@ data-science = [
     "sympy",
     "yfinance",
 ]
-all = ["codeboxapi[data-science]"]
+all = ["codeboxapi[data-science]", "codeboxapi[serve]"]
+
+[project.scripts]
+codeboxapi-serve = "codeboxapi.api:serve"
 
 [tool.hatch.metadata]
 allow-direct-references = true

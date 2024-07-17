@@ -1,2 +1,0 @@
-fastapi
-codeboxapi[data-science] @ git+https://github.com/shroominic/codebox-api.git@v0.2
