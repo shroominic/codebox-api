@@ -49,7 +49,7 @@ class RemoteBox(CodeBox):
             method="POST",
             url="/stream",
             timeout=timeout,
-            params={"code": code, "kernel": kernel, "cwd": cwd},
+            json={"code": code, "kernel": kernel, "cwd": cwd},
         ) as response:
             for chunk in response.iter_text():
                 yield ExecChunk.decode(chunk)
@@ -66,7 +66,7 @@ class RemoteBox(CodeBox):
             method="POST",
             url="/stream",
             timeout=timeout,
-            params={"code": code, "kernel": kernel, "cwd": cwd},
+            json={"code": code, "kernel": kernel, "cwd": cwd},
         ) as response:
             async for chunk in response.aiter_text():
                 yield ExecChunk.decode(chunk)

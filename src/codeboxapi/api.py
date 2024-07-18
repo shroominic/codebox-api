@@ -2,10 +2,11 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from os import getenv
-from typing import Annotated, AsyncGenerator, Literal
+from typing import AsyncGenerator, Literal
 
-from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from .local import LocalBox
 from .utils import CodeBoxFile
@@ -41,19 +42,21 @@ async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
 
 
+class ExecBody(BaseModel):
+    code: str
+    kernel: Literal["ipython", "bash"] = "ipython"
+    timeout: int | None = None
+    cwd: str | None = None
+
+
 @app.post("/exec")
 async def exec(
-    code: Annotated[str, Body()],
-    kernel: Literal["ipython", "bash"] = "ipython",
-    timeout: int | None = None,
-    cwd: str | None = None,
-    codebox: LocalBox = Depends(get_codebox),
+    exec: ExecBody, codebox: LocalBox = Depends(get_codebox)
 ) -> StreamingResponse:
-    print("code", code)
-
     async def event_stream() -> AsyncGenerator[str, None]:
-        async for chunk in codebox.astream_exec(code, kernel, timeout, cwd):
-            print("chunk", chunk)
+        async for chunk in codebox.astream_exec(
+            exec.code, exec.kernel, exec.timeout, exec.cwd
+        ):
             yield chunk.__str__()
 
     return StreamingResponse(event_stream())
@@ -83,3 +86,7 @@ def serve():
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=getenv("CODEBOX_PORT", 8069))
+
+
+if __name__ == "__main__":
+    serve()
