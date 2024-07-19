@@ -1,6 +1,6 @@
 """
 Local implementation of CodeBox.
-This is useful for testing and development.c
+This is useful for testing and development.
 In case you don't put an api_key,
 this is the default CodeBox.
 """
@@ -12,14 +12,22 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 import typing as t
-from io import StringIO
-from typing import Generator
+from queue import Queue
 
-from IPython.core.interactiveshell import InteractiveShell
+from IPython.core.interactiveshell import ExecutionResult, InteractiveShell
 
 from .codebox import CodeBox, CodeBoxFile, ExecChunk
-from .utils import check_installed, raise_timeout, resolve_pathlike
+from .utils import check_installed, raise_timeout, resolve_pathlike, run_inside
+
+
+def _print(*text, stdout):
+    _stdout = sys.stdout
+    sys.stdout = stdout
+    print(*text, flush=True)
+    sys.stdout = _stdout
 
 
 class LocalBox(CodeBox):
@@ -41,13 +49,15 @@ class LocalBox(CodeBox):
         self.session_id = session_id or ""
         os.makedirs(codebox_cwd, exist_ok=True)
         self.cwd = os.path.abspath(codebox_cwd)
-        os.chdir(self.cwd)
         check_installed("ipython")
         self.shell = InteractiveShell.instance()
         self.shell.enable_gui = lambda x: None  # type: ignore
         self._patch_matplotlib_show()
 
     def _patch_matplotlib_show(self) -> None:
+        import matplotlib
+
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
         def custom_show(close=True):
@@ -69,63 +79,116 @@ class LocalBox(CodeBox):
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> t.Generator[ExecChunk, None, None]:
-        code = resolve_pathlike(code)
+        with raise_timeout(timeout):
+            code = resolve_pathlike(code)
 
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        redirected_output = sys.stdout = StringIO()
-        redirected_error = sys.stderr = StringIO()
-
-        try:
             if kernel == "ipython":
-                result = self.shell.run_cell(code)
-                output = redirected_output.getvalue()
-                error = redirected_error.getvalue()
-
-                if "<img src='data:image/png;base64," in output:
-                    image_pattern = r"<img src='data:image/png;base64,(.*?)' />"
-                    image_matches = re.findall(image_pattern, output)
-                    for img_str in image_matches:
-                        yield ExecChunk(type="image", content=img_str)
-                elif output:
-                    yield ExecChunk(type="text", content=output)
-                if error:
-                    yield ExecChunk(type="error", content=error)
-                if result.result is not None:
-                    yield ExecChunk(type="text", content=str(result.result))
-
-            elif kernel == "bash":
-                try:
-                    process = subprocess.Popen(
-                        code,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        cwd=cwd,
+                with run_inside(cwd or self.cwd):
+                    old_stdout, old_stderr = sys.stdout, sys.stderr
+                    temp_output, temp_error = sys.stdout, sys.stderr = (
+                        io.StringIO(),
+                        io.StringIO(),
                     )
                     try:
-                        stdout, stderr = process.communicate(timeout=timeout)
-                        if stdout:
-                            yield ExecChunk(type="text", content=stdout)
-                        if stderr:
-                            yield ExecChunk(type="error", content=stderr)
-                        if process.returncode != 0:
+                        queue = Queue[ExecChunk | None]()
+                        _result: list[ExecutionResult] = []
+
+                        def _run_cell(c: str, result: list[ExecutionResult]) -> None:
+                            time.sleep(0.0001)
+                            result.append(self.shell.run_cell(c))
+
+                        run_cell = threading.Thread(
+                            target=_run_cell, args=(code, _result)
+                        )
+
+                        def stream_chunks(_out: io.StringIO, _err: io.StringIO) -> None:
+                            while run_cell.is_alive():
+                                time.sleep(0.0001)
+                                if output := _out.getvalue():
+                                    # todo make this more efficient?
+                                    sys.stdout = _out = io.StringIO()
+
+                                    if "<img src='data:image/png;base64," in output:
+                                        image_pattern = (
+                                            r"<img src='data:image/png;base64,(.*?)' />"
+                                        )
+                                        image_matches = re.findall(
+                                            image_pattern, output
+                                        )
+                                        for img_str in image_matches:
+                                            queue.put(
+                                                ExecChunk(type="image", content=img_str)
+                                            )
+                                        output = re.sub(image_pattern, "", output)
+
+                                    if output:
+                                        if output.startswith("Out["):
+                                            # todo better disable logging somehow
+                                            output = re.sub(r"Out[(.*?)]: ", "", output)
+                                        queue.put(
+                                            ExecChunk(type="text", content=output)
+                                        )
+
+                                if error := _err.getvalue():
+                                    # todo make this more efficient?
+                                    sys.stderr = _err = io.StringIO()
+                                    queue.put(ExecChunk(type="error", content=error))
+
+                            queue.put(None)
+
+                        stream = threading.Thread(
+                            target=stream_chunks, args=(temp_output, temp_error)
+                        )
+
+                        run_cell.start()
+                        stream.start()
+
+                        while True:
+                            time.sleep(0.001)
+                            if queue.qsize() > 0:
+                                if chunk := queue.get():
+                                    yield chunk
+                                else:
+                                    break
+
+                        result = _result[0]
+                        if result.error_before_exec:
                             yield ExecChunk(
                                 type="error",
-                                content="Command failed with "
-                                f"exit code {process.returncode}",
+                                content=str(result.error_before_exec).replace(
+                                    "\\n", "\n"
+                                ),
                             )
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        yield ExecChunk(type="error", content="Command timed out")
-                except Exception as e:
-                    yield ExecChunk(type="error", content=str(e))
+                        elif result.error_in_exec:
+                            yield ExecChunk(
+                                type="error",
+                                content=str(result.error_in_exec).replace("\\n", "\n"),
+                            )
+                        elif result.result is not None:
+                            yield ExecChunk(type="text", content=str(result.result))
+
+                    finally:
+                        sys.stdout = old_stdout
+                        sys.stderr = old_stderr
+
+            elif kernel == "bash":
+                # todo maybe implement using queue
+                process = subprocess.Popen(
+                    code,
+                    cwd=cwd or self.cwd,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                if process.stdout:
+                    for c in process.stdout:
+                        yield ExecChunk(content=c.decode(), type="text")
+                if process.stderr:
+                    for c in process.stderr:
+                        yield ExecChunk(content=c.decode(), type="error")
+
             else:
                 raise ValueError(f"Unsupported kernel: {kernel}")
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
 
     async def astream_exec(
         self,
@@ -134,59 +197,82 @@ class LocalBox(CodeBox):
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> t.AsyncGenerator[ExecChunk, None]:
-        code = resolve_pathlike(code)
+        async with asyncio.timeout(timeout):
+            code = resolve_pathlike(code)
 
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        redirected_output = sys.stdout = StringIO()
-        redirected_error = sys.stderr = StringIO()
-
-        try:
             if kernel == "ipython":
-                result = await self.shell.run_cell_async(
-                    code, store_history=False, silent=True
-                )
-                output = redirected_output.getvalue()
-                error = redirected_error.getvalue()
-                if "<img src='data:image/png;base64," in output:
-                    image_pattern = r"<img src='data:image/png;base64,(.*?)' />"
-                    image_matches = re.findall(image_pattern, output)
-                    for img_str in image_matches:
-                        yield ExecChunk(type="image", content=img_str)
-                elif output:
-                    yield ExecChunk(type="text", content=output)
-                if error:
-                    yield ExecChunk(type="error", content=error)
-                if result.result is not None:
-                    yield ExecChunk(type="text", content=str(result.result))
-            elif kernel == "bash":
-                try:
-                    process = await asyncio.create_subprocess_shell(
-                        code,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        cwd=cwd,
+                with run_inside(cwd or self.cwd):
+                    old_stdout, old_stderr = sys.stdout, sys.stderr
+                    temp_output, temp_error = sys.stdout, sys.stderr = (
+                        io.StringIO(),
+                        io.StringIO(),
                     )
-                    stdout, stderr = await asyncio.wait_for(
-                        process.communicate(), timeout=timeout
-                    )
-                    if stdout:
-                        yield ExecChunk(type="text", content=stdout.decode())
-                    if stderr:
-                        yield ExecChunk(type="error", content=stderr.decode())
-                    if process.returncode != 0:
-                        yield ExecChunk(
-                            type="error",
-                            content="Command failed with "
-                            f"exit code {process.returncode}",
+
+                    try:
+                        run_cell = asyncio.create_task(
+                            asyncio.to_thread(self.shell.run_cell, code)
                         )
-                except asyncio.TimeoutError:
-                    yield ExecChunk(type="error", content="Command timed out")
+
+                        while not run_cell.done():
+                            await asyncio.sleep(0.001)
+                            if output := temp_output.getvalue():
+                                # todo make this more efficient?
+                                sys.stdout = temp_output = io.StringIO()
+
+                                if "<img src='data:image/png;base64," in output:
+                                    image_pattern = (
+                                        r"<img src='data:image/png;base64,(.*?)' />"
+                                    )
+                                    image_matches = re.findall(image_pattern, output)
+                                    for img_str in image_matches:
+                                        yield ExecChunk(type="image", content=img_str)
+                                    output = re.sub(image_pattern, "", output)
+
+                                if output:
+                                    if output.startswith("Out["):
+                                        # todo better disable logging somehow
+                                        output = re.sub(
+                                            r"Out\[(.*?)\]: ", "", output.strip()
+                                        )
+                                    yield ExecChunk(type="text", content=output)
+
+                            if error := temp_error.getvalue():
+                                sys.stderr = temp_error = io.StringIO()
+                                yield ExecChunk(type="error", content=error)
+
+                        result = await run_cell
+                        if result.error_before_exec:
+                            yield ExecChunk(
+                                type="error", content=str(result.error_before_exec)
+                            )
+                        elif result.error_in_exec:
+                            yield ExecChunk(
+                                type="error", content=str(result.error_in_exec)
+                            )
+                        elif result.result is not None:
+                            yield ExecChunk(type="text", content=str(result.result))
+                    finally:
+                        sys.stdout = old_stdout
+                        sys.stderr = old_stderr
+
+            elif kernel == "bash":
+                process = await asyncio.create_subprocess_shell(
+                    code,
+                    cwd=cwd or self.cwd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+
+                # todo yield at the same time and not after each other
+                if process.stdout:
+                    async for chunk in process.stdout:
+                        yield ExecChunk(content=chunk.decode(), type="text")
+
+                if process.stderr:
+                    async for err in process.stderr:
+                        yield ExecChunk(content=err.decode(), type="error")
             else:
                 raise ValueError(f"Unsupported kernel: {kernel}")
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
 
     async def aupload(
         self,
@@ -218,10 +304,11 @@ class LocalBox(CodeBox):
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> Generator[bytes, None, None]:
+    ) -> t.Generator[bytes, None, None]:
         with raise_timeout(timeout):
             with open(os.path.join(self.cwd, remote_file_path), "rb") as f:
-                yield f.read()
+                while chunk := f.read(8192):
+                    yield chunk
 
     async def astream_download(
         self,
@@ -234,4 +321,5 @@ class LocalBox(CodeBox):
             async with aiofiles.open(
                 os.path.join(self.cwd, remote_file_path), "rb"
             ) as f:
-                yield await f.read()
+                while chunk := await f.read(8192):
+                    yield chunk

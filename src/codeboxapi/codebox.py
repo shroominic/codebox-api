@@ -92,7 +92,7 @@ class CodeBox:
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ExecResult:
-        """Execute python code inside the CodeBox instance"""
+        """Execute code inside the CodeBox instance"""
         return flatten_exec_result(self.stream_exec(code, kernel, timeout, cwd))
 
     def stream_exec(
@@ -102,7 +102,7 @@ class CodeBox:
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> Generator[ExecChunk, None, None]:
-        """Stream Chunks of Execute python code inside the CodeBox instance"""
+        """Executes the code and streams the result."""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
     def upload(
@@ -216,8 +216,12 @@ class CodeBox:
     async def alist_packages(self) -> list[str]:
         return (await self.aexec("uv pip list", kernel="bash")).text.splitlines()
 
-    async def alist_variables(self) -> list[str]:
-        return (await self.aexec("%who")).text.splitlines()
+    async def ashow_variables(self) -> dict[str, str]:
+        vars = [
+            line.strip() for line in (await self.aexec("%who")).text.strip().split("\t")
+        ]
+        # todo remove that splitting thing when Out[0] thing is fixed
+        return {v: (await self.aexec(v)).text for v in vars}
 
     async def arestart(self) -> None:
         """Restart the Jupyter kernel"""
@@ -253,8 +257,8 @@ class CodeBox:
     def list_packages(self) -> list[str]:
         return syncify(self.alist_packages)()
 
-    def list_variables(self) -> list[str]:
-        return syncify(self.alist_variables)()
+    def show_variables(self) -> dict[str, str]:
+        return syncify(self.ashow_variables)()
 
     def restart(self) -> None:
         return syncify(self.arestart)()
