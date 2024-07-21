@@ -1,23 +1,15 @@
-[ ] - gpu support
-
 [ ] - different python versions
 
-[ ] - node/bun engine
+[ ] - gpu support
 
-[ ] - metadata kw storage
+[ ] - js kernel
 
-[ ] - different container sizes (cpu/ram)
+[ ] - metadata for kw storage
 
-[ ] - variable timeout
+[ ] - request only mode
 
-[ ] - request only mode with dynamic filesystem
+[ ] - s3 filesystems
 
-[ ] - general dynamic filesystem
+[ ] - add pypi requirements to factory
 
-[ ] - requirements on startup
-
-[ ] - chromiumbox + vectorbox
-
-[ ] - gitbox
-
-[ ] - seperate .venv for localbox managed by uv
+[ ] - visual-chromium-box
