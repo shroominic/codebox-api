@@ -37,4 +37,9 @@ class DockerBox(RemoteBox):
             ["docker", "run", "-d", "--rm", "-p", f"{self.port}:8069", image],
             check=True,
         )
-        self.aclient = httpx.AsyncClient(base_url=f"http://localhost:{self.port}")
+        self.base_url = f"http://localhost:{self.port}"
+        self.client = httpx.Client(base_url=self.base_url)
+        self.aclient = httpx.AsyncClient(base_url=self.base_url)
+
+    # def healthcheck(self) -> str:
+    #     return self.client.get("/").text
