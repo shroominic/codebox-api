@@ -1,9 +1,9 @@
+import os
 import signal
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import partial, reduce, wraps
 from importlib.metadata import PackageNotFoundError, distribution
-from os import PathLike, getenv
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -92,10 +92,7 @@ class CodeBoxFile:
     def codebox(self) -> "CodeBox":
         from .codebox import CodeBox
 
-        return CodeBox(
-            self.codebox_id,
-            codebox_cwd="../.codebox",  # type: ignore
-        )
+        return CodeBox(self.codebox_id)
 
     @property
     def name(self) -> str:
@@ -132,7 +129,7 @@ def deprecated(message: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            if getenv("IGNORE_DEPRECATION_WARNINGS", "false").lower() == "true":
+            if os.getenv("IGNORE_DEPRECATION_WARNINGS", "false").lower() == "true":
                 return func(*args, **kwargs)
             warn(
                 f"{func.__name__} is deprecated. {message}",
@@ -146,8 +143,8 @@ def deprecated(message: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     return decorator
 
 
-def resolve_pathlike(file: str | PathLike) -> str:
-    if isinstance(file, PathLike):
+def resolve_pathlike(file: str | os.PathLike) -> str:
+    if isinstance(file, os.PathLike):
         with open(file, "r") as f:
             return f.read()
     return file
@@ -220,51 +217,6 @@ def syncify(async_function: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, 
     return wrapper
 
 
-def parse_message(msg: dict) -> ExecChunk:
-    """
-    Parse a message from the Jupyter kernel.
-    The message is a dictionary which is a part of the message stream.
-    The output is a chunk of the execution result.
-    """
-    if msg["msg_type"] == "stream":
-        return ExecChunk(type="stream", content=msg["content"]["text"])
-    elif msg["msg_type"] == "execute_result":
-        return ExecChunk(type="text", content=msg["content"]["data"]["text/plain"])
-    elif msg["msg_type"] == "display_data":
-        if "image/png" in msg["content"]["data"]:
-            return ExecChunk(type="image", content=msg["content"]["data"]["image/png"])
-        if "text/plain" in msg["content"]["data"]:
-            return ExecChunk(type="text", content=msg["data"]["text/plain"])
-        return ExecChunk(type="error", content="Could not parse output")
-    elif msg["msg_type"] == "status" and msg["content"]["execution_state"] == "idle":
-        return ExecChunk(type="text", content="")
-    elif msg["msg_type"] == "error":
-        return ExecChunk(
-            type="error",
-            content=msg["content"]["ename"] + ": " + msg["content"]["evalue"],
-        )
-    else:
-        return ExecChunk(
-            type="error", content="Could not parse output: Unsupported message type"
-        )
-
-
-def parse_messages(messages: list[dict]) -> ExecResult:
-    """
-    Parse a list of messages from the Jupyter kernel.
-    The output is a list of chunks of the execution result.
-    """
-    chunks = []
-    for msg in messages:
-        if chunk := parse_message(msg):
-            chunks.append(chunk)
-    else:
-        chunks.append(
-            ExecChunk(type="text", content="/* exec successful - no output */")
-        )
-    return ExecResult(chunks=chunks)
-
-
 def check_installed(package: str) -> None:
     """
     Check if the given package is installed.
@@ -272,7 +224,7 @@ def check_installed(package: str) -> None:
     try:
         distribution(package)
     except PackageNotFoundError:
-        if getenv("DEBUG", "false").lower() == "true":
+        if os.getenv("DEBUG", "false").lower() == "true":
             print(
                 f"\nMake sure '{package}' is installed "
                 "when using without a CODEBOX_API_KEY.\n"
@@ -282,7 +234,7 @@ def check_installed(package: str) -> None:
 
 
 def debug_mode() -> bool:
-    return getenv("DEBUG", "false").lower() == "true"
+    return os.getenv("DEBUG", "false").lower() == "true"
 
 
 @contextmanager
@@ -299,6 +251,16 @@ def raise_timeout(timeout: float | None = None):
     finally:
         if timeout is not None:
             signal.alarm(0)
+
+
+@contextmanager
+def run_inside(directory: str):
+    old_cwd = os.getcwd()
+    os.chdir(directory)
+    try:
+        yield
+    finally:
+        os.chdir(old_cwd)
 
 
 def raise_error(message: str) -> NoReturn:
