@@ -1,16 +1,17 @@
 import asyncio
+import os
 
 from codeboxapi import CodeBox
 
 
 def test_codebox():
-    codebox = CodeBox()
+    codebox = CodeBox(api_key=os.getenv("CODEBOX_API_KEY"))
     assert run_sync(codebox), "Failed to run sync codebox remotely"
     assert asyncio.run(run_async(codebox)), "Failed to run async codebox remotely"
 
 
 def test_localbox():
-    codebox = CodeBox(local=True)
+    codebox = CodeBox(api_key="local")
     assert run_sync(codebox), "Failed to run sync codebox locally"
     assert asyncio.run(run_async(codebox)), "Failed to run async codebox locally"
 
