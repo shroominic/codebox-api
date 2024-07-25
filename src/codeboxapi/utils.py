@@ -2,15 +2,12 @@ import os
 import signal
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import partial, reduce, wraps
+from functools import reduce, wraps
 from importlib.metadata import PackageNotFoundError, distribution
 from typing import (
     TYPE_CHECKING,
-    Any,
     AsyncGenerator,
     Callable,
-    Coroutine,
-    Generator,
     Iterator,
     Literal,
     NoReturn,
@@ -18,9 +15,6 @@ from typing import (
     TypeVar,
 )
 from warnings import warn
-
-import anyio
-from anyio._core._eventloop import threadlocals
 
 if TYPE_CHECKING:
     from .codebox import CodeBox
@@ -33,7 +27,7 @@ class ExecChunk:
 
     @classmethod
     def decode(cls, text: str) -> "ExecChunk":
-        type, content = text.split(";\n")
+        type, content = text.split(";\n", 1)
         assert type in ["text", "image", "stream", "error"]
         return cls(type=type, content=content)  # type: ignore[arg-type]
 
@@ -153,20 +147,6 @@ def resolve_pathlike(file: str | os.PathLike) -> str:
 IT = TypeVar("IT")
 
 
-def _syncify_generator(
-    async_gen: AsyncGenerator[IT, None],
-) -> Generator[IT, None, None]:
-    # todo is this even possible?
-    while True:
-        try:
-            if not getattr(threadlocals, "current_async_backend", None):
-                yield anyio.run(async_gen.__anext__)
-            else:
-                yield anyio.from_thread.run(async_gen.__anext__)
-        except StopAsyncIteration:
-            break
-
-
 def reduce_bytes(async_gen: Iterator[bytes]) -> bytes:
     return reduce(lambda x, y: x + y, async_gen)
 
@@ -197,24 +177,6 @@ async def async_flatten_exec_result(
     # merge error chunks
     # ...
     return ExecResult(chunks=[c async for c in async_gen])
-
-
-def syncify(async_function: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
-    """
-    Take an async function and create a regular one that receives the same keyword and
-    positional arguments, and that when called, calls the original async function in
-    the main async loop from the worker thread using `anyio.to_thread.run()`.
-    """
-
-    @wraps(async_function)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        partial_f = partial(async_function, *args, **kwargs)
-
-        if not getattr(threadlocals, "current_async_backend", None):
-            return anyio.run(partial_f)
-        return anyio.from_thread.run(partial_f)
-
-    return wrapper
 
 
 def check_installed(package: str) -> None:
