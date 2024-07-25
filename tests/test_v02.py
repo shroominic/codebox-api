@@ -1,5 +1,4 @@
-import asyncio
-from typing import Literal
+import os
 
 import pytest
 from codeboxapi import CodeBox
@@ -7,21 +6,18 @@ from codeboxapi.utils import CodeBoxFile, ExecChunk, ExecResult
 
 
 @pytest.fixture(
-    scope="session", params=["local"]
-)  # , "docker", getenv("CODEBOX_API_KEY")])
+    scope="session",
+    params=[
+        "local",
+        "docker",
+        # os.getenv("CODEBOX_API_KEY"),
+    ],
+)
 def codebox(request):
-    return CodeBox()  # api_key=request.param)
+    return CodeBox(api_key=request.param)  # api_key=request.param)
 
 
-@pytest.mark.parametrize("method", ["sync", "async"])
-def test_codebox_lifecycle(codebox: CodeBox, method: Literal["sync", "async"]):
-    if method == "sync":
-        _test_sync_lifecycle(codebox)
-    else:
-        asyncio.run(_test_async_lifecycle(codebox))
-
-
-def _test_sync_lifecycle(codebox: CodeBox):
+def test_sync_codebox_lifecycle(codebox: CodeBox):
     assert codebox.healthcheck() == "healthy", "CodeBox should be healthy"
 
     result = codebox.exec("print('Hello World!')")
@@ -68,7 +64,8 @@ def _test_sync_lifecycle(codebox: CodeBox):
     ), "Plot execution should produce exactly one image"
 
 
-async def _test_async_lifecycle(codebox: CodeBox):
+@pytest.mark.asyncio
+async def test_async_codebox_lifecycle(codebox: CodeBox):
     assert await codebox.ahealthcheck() == "healthy", "CodeBox should be healthy"
 
     result = await codebox.aexec("print('Hello World!')")
@@ -117,15 +114,7 @@ async def _test_async_lifecycle(codebox: CodeBox):
     ), "Plot execution should produce exactly one image"
 
 
-@pytest.mark.parametrize("method", ["sync", "async"])
-def test_list_operations(codebox: CodeBox, method: Literal["sync", "async"]):
-    if method == "sync":
-        _test_sync_list_operations(codebox)
-    else:
-        asyncio.run(_test_async_list_operations(codebox))
-
-
-def _test_sync_list_operations(codebox: CodeBox):
+def test_sync_list_operations(codebox: CodeBox):
     codebox.exec("x = 1; y = 'test'; z = [1, 2, 3]")
     variables = codebox.show_variables()
     assert "x" in variables.keys(), "Variable 'x' should be listed"
@@ -149,7 +138,8 @@ def _test_sync_list_operations(codebox: CodeBox):
     ), "Matplotlib should be in the list of packages"
 
 
-async def _test_async_list_operations(codebox: CodeBox):
+@pytest.mark.asyncio
+async def test_async_list_operations(codebox: CodeBox):
     await codebox.aexec("x = 1; y = 'test'; z = [1, 2, 3]")
     variables = await codebox.ashow_variables()
     assert "x" in variables.keys(), "Variable 'x' should be listed"
@@ -175,15 +165,7 @@ async def _test_async_list_operations(codebox: CodeBox):
     ), "Matplotlib should be in the list of packages"
 
 
-@pytest.mark.parametrize("method", ["sync", "async"])
-def test_stream_exec(codebox: CodeBox, method: Literal["sync", "async"]):
-    if method == "sync":
-        _test_sync_stream_exec(codebox)
-    else:
-        asyncio.run(_test_async_stream_exec(codebox))
-
-
-def _test_sync_stream_exec(codebox: CodeBox):
+def test_sync_stream_exec(codebox: CodeBox):
     chunks = list(
         codebox.stream_exec(
             "import time;\nfor i in range(3): time.sleep(0.01); print(i)"
@@ -216,7 +198,6 @@ def _test_sync_stream_exec(codebox: CodeBox):
     assert all(
         chunk.type == "text" for chunk in chunks
     ), "All chunks should be of type 'text' (bash)"
-    print(chunks)
     assert [chunk.content.strip() for chunk in chunks] == [
         "0",
         "1",
@@ -224,7 +205,8 @@ def _test_sync_stream_exec(codebox: CodeBox):
     ], "Chunks should contain correct content (bash)"
 
 
-async def _test_async_stream_exec(codebox: CodeBox):
+@pytest.mark.asyncio
+async def test_async_stream_exec(codebox: CodeBox):
     chunks = [
         chunk
         async for chunk in codebox.astream_exec(
@@ -245,15 +227,7 @@ async def _test_async_stream_exec(codebox: CodeBox):
     ], "Chunks should contain correct content"
 
 
-@pytest.mark.parametrize("method", ["sync", "async"])
-def test_error_handling(codebox: CodeBox, method: Literal["sync", "async"]):
-    if method == "sync":
-        _test_sync_error_handling(codebox)
-    else:
-        asyncio.run(_test_async_error_handling(codebox))
-
-
-def _test_sync_error_handling(codebox: CodeBox):
+def test_sync_error_handling(codebox: CodeBox):
     result = codebox.exec("1/0")
     assert result.errors, "Execution should produce an error"
     error = result.errors[0].lower()
@@ -262,7 +236,8 @@ def _test_sync_error_handling(codebox: CodeBox):
     ), "Error should be a ZeroDivisionError"
 
 
-async def _test_async_error_handling(codebox: CodeBox):
+@pytest.mark.asyncio
+async def test_async_error_handling(codebox: CodeBox):
     result = await codebox.aexec("1/0")
     assert result.errors, "Execution should produce an error"
     error = result.errors[0].lower()
@@ -271,15 +246,7 @@ async def _test_async_error_handling(codebox: CodeBox):
     ), "Error should be a ZeroDivisionError"
 
 
-@pytest.mark.parametrize("method", ["sync", "async"])
-def test_bash_commands(codebox: CodeBox, method: Literal["sync", "async"]):
-    if method == "sync":
-        _test_bash_commands(codebox)
-    else:
-        asyncio.run(_test_async_bash_commands(codebox))
-
-
-def _test_bash_commands(codebox: CodeBox):
+def test_sync_bash_commands(codebox: CodeBox):
     result = codebox.exec("echo ok", kernel="bash")
     assert "ok" in result.text, "Execution should contain 'ok'"
     result = codebox.exec('echo print("Hello!") > test.py', kernel="bash")
@@ -289,7 +256,8 @@ def _test_bash_commands(codebox: CodeBox):
     assert result.text.strip() == "Hello!", "Execution result should be 'Hello!'"
 
 
-async def _test_async_bash_commands(codebox: CodeBox):
+@pytest.mark.asyncio
+async def test_async_bash_commands(codebox: CodeBox):
     result = await codebox.aexec("echo ok", kernel="bash")
     assert "ok" in result.text, "Execution should contain 'ok'"
     result = await codebox.aexec("echo 'print(\"Hello!\")' > test.py", kernel="bash")
