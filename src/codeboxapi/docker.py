@@ -30,16 +30,34 @@ class DockerBox(RemoteBox):
         self,
         port_or_range: int | tuple[int, int] = 8069,
         image: str = "shroominic/codebox:latest",
-        **_: bool,
+        timeout: float = 1,  # minutes
+        **_,
     ) -> None:
         self.port = get_free_port(port_or_range)
         subprocess.run(
-            ["docker", "run", "-d", "--rm", "-p", f"{self.port}:8069", image],
+            [
+                "docker",
+                "run",
+                "-d",
+                "--rm",
+                "-e",
+                f"CODEBOX_TIMEOUT={timeout}",
+                "-p",
+                f"{self.port}:8069",
+                image,
+            ],
             check=True,
         )
+        self.session_id = str(self.port)
         self.base_url = f"http://localhost:{self.port}"
         self.client = httpx.Client(base_url=self.base_url)
         self.aclient = httpx.AsyncClient(base_url=self.base_url)
+        self._wait_for_startup()
 
-    # def healthcheck(self) -> str:
-    #     return self.client.get("/").text
+    def _wait_for_startup(self) -> None:
+        while True:
+            try:
+                self.client.get("/")
+                break
+            except httpx.HTTPError:
+                pass
