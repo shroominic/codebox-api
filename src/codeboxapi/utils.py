@@ -2,12 +2,14 @@ import os
 import signal
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import reduce, wraps
+from functools import partial, reduce, wraps
 from importlib.metadata import PackageNotFoundError, distribution
 from typing import (
     TYPE_CHECKING,
+    Any,
     AsyncGenerator,
     Callable,
+    Coroutine,
     Iterator,
     Literal,
     NoReturn,
@@ -16,19 +18,40 @@ from typing import (
 )
 from warnings import warn
 
+import anyio
+from anyio._core._eventloop import threadlocals
+
 if TYPE_CHECKING:
     from .codebox import CodeBox
 
 
+# import sys
+# def _print(*text, stdout):
+#     _stdout = sys.stdout
+#     sys.stdout = stdout
+#     print(*text, flush=True)
+#     sys.stdout = _stdout
+
+
 @dataclass
 class ExecChunk:
-    type: Literal["text", "image", "stream", "error"]
+    """
+    A chunk of output from an execution.
+    The type is one of:
+    - txt: text output
+    - img: image output
+    - stm: stream output
+    - err: error output
+    """
+
+    type: Literal["txt", "img", "stm", "err"]
     content: str
 
     @classmethod
     def decode(cls, text: str) -> "ExecChunk":
-        type, content = text.split(";\n", 1)
-        assert type in ["text", "image", "stream", "error"]
+        type, content = text[:3], text[5:]
+        print(f"Decoding chunk: {type=}, {content=}")
+        assert type in ["txt", "img", "stm", "err"]
         return cls(type=type, content=content)  # type: ignore[arg-type]
 
     def __str__(self) -> str:
@@ -44,16 +67,16 @@ class ExecResult:
         return "".join(
             chunk.content
             for chunk in self.chunks
-            if chunk.type == "text" or chunk.type == "stream"
+            if chunk.type == "txt" or chunk.type == "stm"
         )
 
     @property
     def images(self) -> list[str]:
-        return [chunk.content for chunk in self.chunks if chunk.type == "image"]
+        return [chunk.content for chunk in self.chunks if chunk.type == "img"]
 
     @property
     def errors(self) -> list[str]:
-        return [chunk.content for chunk in self.chunks if chunk.type == "error"]
+        return [chunk.content for chunk in self.chunks if chunk.type == "err"]
 
 
 # todo move somewhere more clean
@@ -144,9 +167,6 @@ def resolve_pathlike(file: str | os.PathLike) -> str:
     return file
 
 
-IT = TypeVar("IT")
-
-
 def reduce_bytes(async_gen: Iterator[bytes]) -> bytes:
     return reduce(lambda x, y: x + y, async_gen)
 
@@ -177,6 +197,24 @@ async def async_flatten_exec_result(
     # merge error chunks
     # ...
     return ExecResult(chunks=[c async for c in async_gen])
+
+
+def syncify(async_function: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
+    """
+    Take an async function and create a regular one that receives the same keyword and
+    positional arguments, and that when called, calls the original async function in
+    the main async loop from the worker thread using `anyio.to_thread.run()`.
+    """
+
+    @wraps(async_function)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        partial_f = partial(async_function, *args, **kwargs)
+
+        if not getattr(threadlocals, "current_async_backend", None):
+            return anyio.run(partial_f)
+        return anyio.from_thread.run(partial_f)
+
+    return wrapper
 
 
 def check_installed(package: str) -> None:

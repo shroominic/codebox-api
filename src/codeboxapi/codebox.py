@@ -35,9 +35,9 @@ Usage
 
 """
 
+import os
+import typing as t
 from importlib import import_module
-from os import PathLike
-from typing import Any, AsyncGenerator, BinaryIO, Generator, Literal
 
 import anyio
 
@@ -57,9 +57,9 @@ class CodeBox:
     def __new__(
         cls,
         session_id: str | None = None,
-        api_key: str | Literal["local", "docker"] = "local",
-        factory_id: str | Literal["default"] = "default",
-        **kwargs: Any,
+        api_key: str | t.Literal["local", "docker"] = "local",
+        factory_id: str | t.Literal["default"] = "default",
+        **kwargs: t.Any,
     ) -> "CodeBox":
         """
         Creates a CodeBox session
@@ -75,8 +75,8 @@ class CodeBox:
     def __init__(
         self,
         session_id: str | None = None,
-        api_key: str | Literal["local", "docker"] = "local",
-        factory_id: str | Literal["default"] = "default",
+        api_key: str | t.Literal["local", "docker"] = "local",
+        factory_id: str | t.Literal["default"] = "default",
         **_: bool,
     ) -> None:
         self.session_id = session_id or "local"
@@ -87,8 +87,8 @@ class CodeBox:
 
     def exec(
         self,
-        code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ExecResult:
@@ -97,18 +97,18 @@ class CodeBox:
 
     def stream_exec(
         self,
-        code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> Generator[ExecChunk, None, None]:
+    ) -> t.Generator[ExecChunk, None, None]:
         """Executes the code and streams the result."""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
     def upload(
         self,
         remote_file_path: str,
-        content: BinaryIO | bytes | str,
+        content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
     ) -> CodeBoxFile:
         """Upload a file to the CodeBox instance"""
@@ -118,7 +118,7 @@ class CodeBox:
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> Generator[bytes, None, None]:
+    ) -> t.Generator[bytes, None, None]:
         """Download a file as open BinaryIO. Make sure to close the file after use."""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
@@ -126,8 +126,8 @@ class CodeBox:
 
     async def aexec(
         self,
-        code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ExecResult:
@@ -138,18 +138,18 @@ class CodeBox:
 
     def astream_exec(
         self,
-        code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        code: str | os.PathLike,
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> AsyncGenerator[ExecChunk, None]:
+    ) -> t.AsyncGenerator[ExecChunk, None]:
         """Async Stream Chunks of Execute python code inside the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
     async def aupload(
         self,
         remote_file_path: str,
-        content: BinaryIO | bytes | str,
+        content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
     ) -> CodeBoxFile:
         """Async Upload a file to the CodeBox instance"""
@@ -168,13 +168,13 @@ class CodeBox:
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> AsyncGenerator[bytes, None]:
+    ) -> t.AsyncGenerator[bytes, None]:
         """Async Download a file as BinaryIO. Make sure to close the file after use."""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
     # HELPER METHODS
 
-    async def ahealthcheck(self) -> Literal["healthy", "error"]:
+    async def ahealthcheck(self) -> t.Literal["healthy", "error"]:
         return (
             "healthy"
             if "ok" in (await self.aexec("echo ok", kernel="bash")).text
@@ -209,9 +209,12 @@ class CodeBox:
     def _parse_size(self, size_str: str) -> int:
         """Convert human-readable size to bytes."""
         units = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
-        number = float(size_str[:-1])
-        unit = size_str[-1].upper()
-        return int(number * units.get(unit, 1))
+        try:
+            number = float(size_str[:-1])
+            unit = size_str[-1].upper()
+            return int(number * units.get(unit, 1))
+        except ValueError:
+            return -1
 
     async def alist_packages(self) -> list[str]:
         return (await self.aexec("uv pip list", kernel="bash")).text.splitlines()
@@ -273,7 +276,7 @@ class CodeBox:
         "When calling any method you will get assigned a new session.\n"
         "The `.start` method is deprecated. Use `.healthcheck` instead."
     )
-    async def astart(self) -> Literal["started", "error"]:
+    async def astart(self) -> t.Literal["started", "error"]:
         return "started" if (await self.ahealthcheck()) == "healthy" else "error"
 
     @deprecated(
@@ -281,28 +284,30 @@ class CodeBox:
         "The session will be closed automatically after the last interaction.\n"
         "(default timeout: 15 minutes)"
     )
-    async def astop(self) -> Literal["stopped"]:
+    async def astop(self) -> t.Literal["stopped"]:
         return "stopped"
 
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    async def arun(self, code: str | PathLike) -> CodeBoxOutput:
+    async def arun(self, code: str | os.PathLike) -> CodeBoxOutput:
         exec_result = await self.aexec(code, kernel="ipython")
         if exec_result.images:
             return CodeBoxOutput(type="image/png", content=exec_result.images[0])
+        if exec_result.errors:
+            return CodeBoxOutput(type="stderr", content=exec_result.errors[0])
         return CodeBoxOutput(type="stdout", content=exec_result.text)
 
     @deprecated(
         "The `.status` method is deprecated. Use `.healthcheck` instead.",
     )
-    async def astatus(self) -> Literal["started", "running", "stopped"]:
+    async def astatus(self) -> t.Literal["started", "running", "stopped"]:
         return "running" if await self.ahealthcheck() == "healthy" else "stopped"
 
     @deprecated(
         "The `.start` method is deprecated. Use `.healthcheck` instead.",
     )
-    def start(self) -> Literal["started", "error"]:
+    def start(self) -> t.Literal["started", "error"]:
         return syncify(self.astart)()
 
     @deprecated(
@@ -310,17 +315,17 @@ class CodeBox:
         "The session will be closed automatically after the last interaction.\n"
         "(default timeout: 15 minutes)"
     )
-    def stop(self) -> Literal["stopped"]:
+    def stop(self) -> t.Literal["stopped"]:
         return syncify(self.astop)()
 
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    def run(self, code: str | PathLike) -> CodeBoxOutput:
+    def run(self, code: str | os.PathLike) -> CodeBoxOutput:
         return syncify(self.arun)(code)
 
     @deprecated(
         "The `.status` method is deprecated. Use `.healthcheck` instead.",
     )
-    def status(self) -> Literal["started", "running", "stopped"]:
+    def status(self) -> t.Literal["started", "running", "stopped"]:
         return syncify(self.astatus)()
