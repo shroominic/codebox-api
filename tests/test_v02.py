@@ -9,8 +9,8 @@ from codeboxapi.utils import CodeBoxFile, ExecChunk, ExecResult
     scope="session",
     params=[
         "local",
-        "docker",
-        # os.getenv("CODEBOX_API_KEY"),
+        # "docker",
+        os.getenv("CODEBOX_API_KEY"),
     ],
 )
 def codebox(request):
@@ -178,8 +178,8 @@ def test_sync_stream_exec(codebox: CodeBox):
         isinstance(chunk, ExecChunk) for chunk in chunks
     ), "All items should be ExecChunk instances (ipython)"
     assert all(
-        chunk.type == "text" for chunk in chunks
-    ), "All chunks should be of type 'text' (ipython)"
+        chunk.type == "txt" for chunk in chunks
+    ), "All chunks should be of type 'txt' (ipython)"
     assert [chunk.content.strip() for chunk in chunks] == [
         "0",
         "1",
@@ -196,8 +196,8 @@ def test_sync_stream_exec(codebox: CodeBox):
         isinstance(chunk, ExecChunk) for chunk in chunks
     ), "All items should be ExecChunk instances (bash)"
     assert all(
-        chunk.type == "text" for chunk in chunks
-    ), "All chunks should be of type 'text' (bash)"
+        chunk.type == "txt" for chunk in chunks
+    ), "All chunks should be of type 'txt' (bash)"
     assert [chunk.content.strip() for chunk in chunks] == [
         "0",
         "1",
@@ -218,8 +218,8 @@ async def test_async_stream_exec(codebox: CodeBox):
         isinstance(chunk, ExecChunk) for chunk in chunks
     ), "All items should be ExecChunk instances"
     assert all(
-        chunk.type == "text" for chunk in chunks
-    ), "All chunks should be of type 'text'"
+        chunk.type == "txt" for chunk in chunks
+    ), "All chunks should be of type 'txt'"
     assert [chunk.content.strip() for chunk in chunks] == [
         "0",
         "1",
@@ -249,7 +249,7 @@ async def test_async_error_handling(codebox: CodeBox):
 def test_sync_bash_commands(codebox: CodeBox):
     result = codebox.exec("echo ok", kernel="bash")
     assert "ok" in result.text, "Execution should contain 'ok'"
-    result = codebox.exec('echo print("Hello!") > test.py', kernel="bash")
+    result = codebox.exec("echo \"print('Hello!')\" > test.py", kernel="bash")
     assert result.text.strip() == "", "Execution result should be empty"
     assert "test.py" in [file.remote_path for file in codebox.list_files()]
     result = codebox.exec("python test.py", kernel="bash")
