@@ -4,7 +4,6 @@
 [![code-check](https://github.com/shroominic/codebox-api/actions/workflows/code-check.yml/badge.svg)](https://github.com/shroominic/codebox-api/actions/workflows/code-check.yml)
 ![Downloads](https://img.shields.io/pypi/dm/codeboxapi)
 ![License](https://img.shields.io/pypi/l/codeboxapi)
-![PyVersion](https://img.shields.io/pypi/pyversions/codeboxapi)
 
 CodeBox is the simplest cloud infrastructure for your LLM Apps and Services.
 It allows you to run python code in an isolated/sandboxed environment.
@@ -45,9 +44,10 @@ with CodeBox() as codebox:
 
 ## Where to get your api-key?
 
-CodeBox is currently in early development so I created a stripe [payment link as login](https://pay.codeboxapi.com/b/00g3e6dZX2fTg0gaEE) system.
+Checkout the [pricing page](https://codeboxapi.com/pricing) of CodeBoxAPI. By subscribing to a plan,
+you will receive an account with an api-key.
 Bear in mind, we don't have many automations set up right now,
-so you'll need to write an [email](mailto:contact@codeboxapi.com) for things like refunds,
+so you'll need to write an [email](mailto:team@codeboxapi.com) for things like refunds,
 sub cancellations, or upgrades.
 
 ## Docs
@@ -65,4 +65,4 @@ You can open an issue or submit a pull request.
 
 ## Contact
 
-You can contact me at [contact@codeboxapi.com](mailto:contact@codeboxapi.com)
+You can contact me at [team@codeboxapi.com](mailto:team@codeboxapi.com)
