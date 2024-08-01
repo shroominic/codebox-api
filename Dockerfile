@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv as uv
 
-FROM --platform=arm64 python:3.11 as build
+FROM --platform=amd64 python:3.11 as build
 
 ENV VIRTUAL_ENV=/.venv PATH="/.venv/bin:$PATH"
 

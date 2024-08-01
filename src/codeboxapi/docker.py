@@ -43,7 +43,7 @@ class DockerBox(RemoteBox):
                 "-e",
                 f"CODEBOX_TIMEOUT={timeout}",
                 "-p",
-                f"{self.port}:8069",
+                f"{self.port}:8000",
                 image,
             ],
             check=True,

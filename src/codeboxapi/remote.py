@@ -100,21 +100,6 @@ class RemoteBox(CodeBox):
             async for c in self.astream_exec(code, kernel, timeout, cwd):
                 yield c
 
-    def upload(
-        self,
-        remote_file_path: str,
-        content: BinaryIO | bytes | str,
-        timeout: float | None = None,
-    ) -> CodeBoxFile:
-        if isinstance(content, str):
-            content = content.encode("utf-8")
-        response = self.client.post(
-            url="/upload",
-            files={"file": (remote_file_path, content)},
-            timeout=timeout,
-        )
-        return CodeBoxFile(**response.json())
-
     async def aupload(
         self,
         file_name: str,
@@ -124,7 +109,7 @@ class RemoteBox(CodeBox):
         if isinstance(content, str):
             content = content.encode("utf-8")
         response = await self.aclient.post(
-            url="/upload",
+            url="/files/upload",
             files={"file": (file_name, content)},
             timeout=timeout,
         )
@@ -137,9 +122,8 @@ class RemoteBox(CodeBox):
     ) -> Generator[bytes, None, None]:
         with self.client.stream(
             method="GET",
-            url="/download",
+            url=f"/files/download/{remote_file_path}",
             timeout=timeout,
-            params={"file_name": remote_file_path},
         ) as response:
             for chunk in response.iter_bytes():
                 yield chunk
@@ -151,9 +135,8 @@ class RemoteBox(CodeBox):
     ) -> AsyncGenerator[bytes, None]:
         async with self.aclient.stream(
             method="GET",
-            url="/download",
+            url=f"/files/download/{remote_file_path}",
             timeout=timeout,
-            params={"file_name": remote_file_path},
         ) as response:
             async for chunk in response.aiter_bytes():
                 yield chunk
