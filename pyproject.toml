@@ -46,7 +46,7 @@ docs = ["neoteroi-mkdocs", "mkdocs-material"]
 pytest = ["pytest-asyncio"]
 local = ["jupyter-client", "ipykernel", "uv", "aiofiles"]
 vision = ["Pillow"]
-serve = ["fastapi"]
+serve = ["fastapi[standard]"]
 data-science = [
     "codeboxapi[local]",
     "codeboxapi[vision]",
