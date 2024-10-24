@@ -14,19 +14,20 @@ class RemoteBox(CodeBox):
     Sandboxed Python Interpreter
     """
 
-    def __new__(cls) -> "RemoteBox":
+    def __new__(cls, *args, **kwargs) -> "RemoteBox":
         # This is a hack to ignore the CodeBox.__new__ factory method.
         return object.__new__(cls)
 
     def __init__(
         self,
         session_id: str | None = None,
-        api_key: str | Literal["local", "docker"] = "local",
-        factory_id: str | Literal["default"] = "default",
+        api_key: str | Literal["local", "docker"] | None = None,
+        factory_id: str | Literal["default"] | None = None,
         base_url: str | None = None,
     ) -> None:
         self.session_id = session_id or uuid4().hex
-        self.factory_id = factory_id
+        self.factory_id = factory_id or getenv("CODEBOX_FACTORY_ID", "default")
+        assert self.factory_id is not None
         self.api_key = (
             api_key
             or getenv("CODEBOX_API_KEY")
@@ -60,11 +61,15 @@ class RemoteBox(CodeBox):
             response.raise_for_status()
             img_buffer = ""
             for chunk in response.iter_text():
+                # todo check for better solutions
+                # why did I implemented my own streaming protocol?
                 if chunk.startswith("img;") and not chunk.endswith("=="):
                     img_buffer += chunk
                 elif img_buffer and chunk.endswith("=="):
                     yield ExecChunk.decode(img_buffer + chunk)
                     img_buffer = ""
+                elif img_buffer:
+                    img_buffer += chunk
                 else:
                     yield ExecChunk.decode(chunk)
 
@@ -91,6 +96,8 @@ class RemoteBox(CodeBox):
                     elif img_buffer and chunk.endswith("=="):
                         yield ExecChunk.decode(img_buffer + chunk)
                         img_buffer = ""
+                    elif img_buffer:
+                        img_buffer += chunk
                     else:
                         yield ExecChunk.decode(chunk)
         except RuntimeError as e:
@@ -99,6 +106,31 @@ class RemoteBox(CodeBox):
             await anyio.sleep(0.1)
             async for c in self.astream_exec(code, kernel, timeout, cwd):
                 yield c
+
+    def upload(
+        self,
+        file_name: str,
+        content: BinaryIO | bytes | str,
+        timeout: float | None = None,
+    ) -> CodeBoxFile:
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        response = self.client.post(
+            url="/files/upload",
+            files={"file": (file_name, content)},
+            timeout=timeout,
+        )
+        json = response.json()
+        # todo fix: this is bad code
+        del json["codebox_id"]
+        del json["codebox_api_key"]
+        del json["codebox_factory_id"]
+        return CodeBoxFile(
+            **json,
+            codebox_api_key=self.api_key,
+            codebox_factory_id=self.factory_id,
+            codebox_id=self.session_id,
+        )
 
     async def aupload(
         self,
@@ -113,7 +145,17 @@ class RemoteBox(CodeBox):
             files={"file": (file_name, content)},
             timeout=timeout,
         )
-        return CodeBoxFile(**response.json())
+        json = response.json()
+        # todo this is a sign of bad design
+        del json["codebox_id"]
+        del json["codebox_api_key"]
+        del json["codebox_factory_id"]
+        return CodeBoxFile(
+            **json,
+            codebox_api_key=self.api_key,
+            codebox_factory_id=self.factory_id,
+            codebox_id=self.session_id,
+        )
 
     def stream_download(
         self,
