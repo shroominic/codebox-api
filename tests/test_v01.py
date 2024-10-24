@@ -19,15 +19,13 @@ def test_localbox():
 def run_sync(codebox: CodeBox) -> bool:
     try:
         assert codebox.start() == "started"
-        print(codebox.status())
         print("Started")
 
         assert codebox.status() == "running"
-        print(codebox.status())
         print("Running")
 
         codebox.run("x = 'Hello World!'")
-        assert codebox.run("print(x)") == "Hello World!\n"
+        assert codebox.run("print(x)").content == "Hello World!"
         print("Printed")
 
         file_name = "test_file.txt"
@@ -67,15 +65,13 @@ def run_sync(codebox: CodeBox) -> bool:
 async def run_async(codebox: CodeBox) -> bool:
     try:
         assert await codebox.astart() == "started"
-        print(await codebox.astatus())
         print("Started")
 
         assert await codebox.astatus() == "running"
-        print(await codebox.astatus())
         print("Running")
 
         await codebox.arun("x = 'Hello World!'")
-        assert await codebox.arun("print(x)") == "Hello World!\n"
+        assert (await codebox.arun("print(x)")).content == "Hello World!"
         print("Printed")
 
         file_name = "test_file.txt"
@@ -86,7 +82,7 @@ async def run_async(codebox: CodeBox) -> bool:
             await codebox.arun("import os;\nprint(os.listdir(os.getcwd())); ")
         )
 
-        assert file_name in str(codebox.list_files())
+        assert file_name in str(await codebox.alist_files())
 
         assert (await codebox.adownload(file_name)).content == b"Hello World!"
         print("Downloaded")
