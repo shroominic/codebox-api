@@ -57,13 +57,14 @@ class CodeBox:
     def __new__(
         cls,
         session_id: str | None = None,
-        api_key: str | t.Literal["local", "docker"] = "local",
-        factory_id: str | t.Literal["default"] = "default",
-        **kwargs: t.Any,
+        api_key: str | t.Literal["local", "docker"] | None = None,
+        factory_id: str | t.Literal["default"] | None = None,
     ) -> "CodeBox":
         """
         Creates a CodeBox session
         """
+        api_key = api_key or os.getenv("CODEBOX_API_KEY", "local")
+        factory_id = factory_id or os.getenv("CODEBOX_FACTORY_ID", "default")
         if api_key == "local":
             return super().__new__(import_module("codeboxapi.local").LocalBox)
 
@@ -75,13 +76,13 @@ class CodeBox:
     def __init__(
         self,
         session_id: str | None = None,
-        api_key: str | t.Literal["local", "docker"] = "local",
-        factory_id: str | t.Literal["default"] = "default",
+        api_key: str | t.Literal["local", "docker"] | None = None,
+        factory_id: str | t.Literal["default"] | None = None,
         **_: bool,
     ) -> None:
         self.session_id = session_id or "local"
-        self.api_key = api_key
-        self.factory_id = factory_id
+        self.api_key = api_key or os.getenv("CODEBOX_API_KEY", "local")
+        self.factory_id = factory_id or os.getenv("CODEBOX_FACTORY_ID", "default")
 
     # SYNC
 
@@ -112,7 +113,7 @@ class CodeBox:
         timeout: float | None = None,
     ) -> CodeBoxFile:
         """Upload a file to the CodeBox instance"""
-        return syncify(self.aupload)(remote_file_path, content, timeout)
+        raise NotImplementedError("Abstract method, please use a subclass.")
 
     def stream_download(
         self,
@@ -201,6 +202,8 @@ class CodeBox:
                 remote_path=parts[0].removeprefix("./"),
                 size=self._parse_size(parts[1]),
                 codebox_id=self.session_id,
+                codebox_api_key=self.api_key,
+                codebox_factory_id=self.factory_id,
             )
             for file in files
             if (parts := file.split(" ")) and len(parts) == 2
