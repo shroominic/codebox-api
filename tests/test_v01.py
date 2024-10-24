@@ -25,7 +25,7 @@ def run_sync(codebox: CodeBox) -> bool:
         print("Running")
 
         codebox.run("x = 'Hello World!'")
-        assert codebox.run("print(x)").content == "Hello World!"
+        assert codebox.run("print(x)") == "Hello World!\n"
         print("Printed")
 
         file_name = "test_file.txt"
@@ -71,7 +71,7 @@ async def run_async(codebox: CodeBox) -> bool:
         print("Running")
 
         await codebox.arun("x = 'Hello World!'")
-        assert (await codebox.arun("print(x)")).content == "Hello World!"
+        assert (await codebox.arun("print(x)")) == "Hello World!\n"
         print("Printed")
 
         file_name = "test_file.txt"
