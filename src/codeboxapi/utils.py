@@ -50,7 +50,6 @@ class ExecChunk:
     @classmethod
     def decode(cls, text: str) -> "ExecChunk":
         type, content = text[:3], text[5:]
-        print(f"Decoding chunk: {type=}, {content=}")
         assert type in ["txt", "img", "stm", "err"]
         return cls(type=type, content=content)  # type: ignore[arg-type]
 
@@ -102,14 +101,34 @@ class CodeBoxOutput:
 class CodeBoxFile:
     remote_path: str
     size: int
-    codebox_id: str
+    codebox_id: str | None = None
+    codebox_api_key: str | None = None
+    codebox_factory_id: str | None = None
     _content: bytes | None = None
 
     @property
     def codebox(self) -> "CodeBox":
         from .codebox import CodeBox
 
-        return CodeBox(self.codebox_id)
+        if self.codebox_id is None:
+            raise ValueError("CodeBox ID is not set")
+        if self.codebox_api_key is None:
+            raise ValueError("CodeBox API key is not set")
+        if self.codebox_factory_id is None:
+            raise ValueError("CodeBox factory ID is not set")
+        if self.codebox_api_key == "docker":
+            from .docker import DockerBox
+
+            return DockerBox(
+                port_or_range=int(self.codebox_id),
+                image=self.codebox_factory_id,
+                start_container=False,
+            )
+        return CodeBox(
+            session_id=self.codebox_id,
+            api_key=self.codebox_api_key,
+            factory_id=self.codebox_factory_id,
+        )
 
     @property
     def name(self) -> str:
@@ -124,6 +143,16 @@ class CodeBoxFile:
         return self._content or b"".join([
             chunk async for chunk in self.codebox.astream_download(self.remote_path)
         ])
+
+    @classmethod
+    def from_path(cls, path: str) -> "CodeBoxFile":
+        with open(path, "rb") as f:
+            return cls(
+                remote_path=path,
+                size=os.path.getsize(path),
+                codebox_id=None,
+                _content=f.read(),
+            )
 
     def save(self, path: str) -> None:
         with open(path, "wb") as f:
