@@ -1,12 +1,11 @@
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from os import getenv
-from tempfile import SpooledTemporaryFile
+from os import getenv, path
 from typing import AsyncGenerator, Literal
 
 from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from .local import LocalBox
@@ -19,9 +18,9 @@ last_interaction = datetime.utcnow()
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     async def timeout():
-        if (_timeout := getenv("CODEBOX_TIMEOUT", "90")).lower() == "none":
+        if (_timeout := getenv("CODEBOX_TIMEOUT", "15")).lower() == "none":
             return
-        while last_interaction + timedelta(seconds=float(_timeout)) > datetime.utcnow():
+        while last_interaction + timedelta(minutes=float(_timeout)) > datetime.utcnow():
             await asyncio.sleep(1)
         exit(0)
 
@@ -65,8 +64,12 @@ async def download(
     file_name: str,
     timeout: int | None = None,
     codebox: LocalBox = Depends(get_codebox),
-) -> StreamingResponse:
-    return StreamingResponse(codebox.astream_download(file_name, timeout))
+) -> FileResponse:
+    async with asyncio.timeout(timeout):
+        file_path = path.join(codebox.cwd, file_name)
+        return FileResponse(
+            path=file_path, media_type="application/octet-stream", filename=file_name
+        )
 
 
 @app.post("/files/upload")
@@ -77,8 +80,6 @@ async def upload(
 ) -> "CodeBoxFile":
     if not file.filename:
         raise HTTPException(status_code=400, detail="A file name is required")
-    if isinstance(file.file, SpooledTemporaryFile):
-        file.file = file.file
     return await codebox.aupload(file.filename, file.file, timeout)
 
 
@@ -94,7 +95,7 @@ async def deprecated_exec(
 def serve():
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(getenv("PORT", 8069)))
 
 
 if __name__ == "__main__":
