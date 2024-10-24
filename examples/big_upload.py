@@ -19,19 +19,20 @@ def download_file_from_url(url: str) -> None:
     print(codebox.run(f"download_file_from_url('{url}')"))
 
 
-with CodeBox() as codebox:
-    url_upload(
-        codebox,
-        "https://codeboxapistorage.blob.core.windows.net/bucket/data-test.arrow",
-    )
-    print(codebox.list_files())
+codebox = CodeBox()
 
-    url_upload(
-        codebox,
-        "https://codeboxapistorage.blob.core.windows.net/bucket/data-train.arrow",
-    )
-    print(codebox.list_files())
+url_upload(
+    codebox,
+    "https://codeboxapistorage.blob.core.windows.net/bucket/data-test.arrow",
+)
+print(codebox.list_files())
 
-    codebox.run("import os")
-    print(codebox.run("print(os.listdir())"))
-    print(codebox.run("print([(f, os.path.getsize(f)) for f in os.listdir('.')])"))
+url_upload(
+    codebox,
+    "https://codeboxapistorage.blob.core.windows.net/bucket/data-train.arrow",
+)
+print(codebox.list_files())
+
+codebox.run("import os")
+print(codebox.run("print(os.listdir())"))
+print(codebox.run("print([(f, os.path.getsize(f)) for f in os.listdir('.')])"))
