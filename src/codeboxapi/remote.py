@@ -1,3 +1,4 @@
+import re
 from os import PathLike, getenv
 from typing import AsyncGenerator, BinaryIO, Generator, Literal
 from uuid import uuid4
@@ -59,19 +60,16 @@ class RemoteBox(CodeBox):
             json={"code": code, "kernel": kernel, "cwd": cwd},
         ) as response:
             response.raise_for_status()
-            img_buffer = ""
+            buffer = ""
             for chunk in response.iter_text():
-                # todo check for better solutions
-                # why did I implemented my own streaming protocol?
-                if chunk.startswith("img;") and not chunk.endswith("=="):
-                    img_buffer += chunk
-                elif img_buffer and chunk.endswith("=="):
-                    yield ExecChunk.decode(img_buffer + chunk)
-                    img_buffer = ""
-                elif img_buffer:
-                    img_buffer += chunk
-                else:
-                    yield ExecChunk.decode(chunk)
+                buffer += chunk
+                while match := re.match(
+                    r"<(txt|img|err)>(.*?)</\1>", buffer, re.DOTALL
+                ):
+                    _, end = match.span()
+                    t, c = match.groups()
+                    yield ExecChunk(type=t, content=c)  # type: ignore[arg-type]
+                    buffer = buffer[end:]
 
     async def astream_exec(
         self,
@@ -89,17 +87,16 @@ class RemoteBox(CodeBox):
                 json={"code": code, "kernel": kernel, "cwd": cwd},
             ) as response:
                 response.raise_for_status()
-                img_buffer = ""
+                buffer = ""
                 async for chunk in response.aiter_text():
-                    if chunk.startswith("img;") and not chunk.endswith("=="):
-                        img_buffer += chunk
-                    elif img_buffer and chunk.endswith("=="):
-                        yield ExecChunk.decode(img_buffer + chunk)
-                        img_buffer = ""
-                    elif img_buffer:
-                        img_buffer += chunk
-                    else:
-                        yield ExecChunk.decode(chunk)
+                    buffer += chunk
+                    while match := re.match(
+                        r"<(txt|img|err)>(.*?)</\1>", buffer, re.DOTALL
+                    ):
+                        _, end = match.span()
+                        t, c = match.groups()
+                        yield ExecChunk(type=t, content=c)  # type: ignore[arg-type]
+                        buffer = buffer[end:]
         except RuntimeError as e:
             if "loop is closed" not in str(e):
                 raise e

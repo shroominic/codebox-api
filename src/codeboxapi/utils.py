@@ -25,14 +25,6 @@ if TYPE_CHECKING:
     from .codebox import CodeBox
 
 
-# import sys
-# def _print(*text, stdout):
-#     _stdout = sys.stdout
-#     sys.stdout = stdout
-#     print(*text, flush=True)
-#     sys.stdout = _stdout
-
-
 @dataclass
 class ExecChunk:
     """
@@ -40,21 +32,11 @@ class ExecChunk:
     The type is one of:
     - txt: text output
     - img: image output
-    - stm: stream output
     - err: error output
     """
 
-    type: Literal["txt", "img", "stm", "err"]
+    type: Literal["txt", "img", "err"]
     content: str
-
-    @classmethod
-    def decode(cls, text: str) -> "ExecChunk":
-        type, content = text[:3], text[5:]
-        assert type in ["txt", "img", "stm", "err"]
-        return cls(type=type, content=content)  # type: ignore[arg-type]
-
-    def __str__(self) -> str:
-        return f"{self.type};\n{self.content}"
 
 
 @dataclass
@@ -63,11 +45,7 @@ class ExecResult:
 
     @property
     def text(self) -> str:
-        return "".join(
-            chunk.content
-            for chunk in self.chunks
-            if chunk.type == "txt" or chunk.type == "stm"
-        )
+        return "".join(chunk.content for chunk in self.chunks if chunk.type == "txt")
 
     @property
     def images(self) -> list[str]:
@@ -150,7 +128,6 @@ class CodeBoxFile:
             return cls(
                 remote_path=path,
                 size=os.path.getsize(path),
-                codebox_id=None,
                 _content=f.read(),
             )
 
