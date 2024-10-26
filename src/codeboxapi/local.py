@@ -16,12 +16,15 @@ import tempfile as tmpf
 import threading
 import time
 import typing as t
+from builtins import print as important_print
 from queue import Queue
 
 from IPython.core.interactiveshell import ExecutionResult, InteractiveShell
 
 from .codebox import CodeBox, CodeBoxFile, ExecChunk
 from .utils import check_installed, raise_timeout, resolve_pathlike, run_inside
+
+IMAGE_PATTERN = r"<image>(.*?)</image>"
 
 
 class LocalBox(CodeBox):
@@ -40,6 +43,8 @@ class LocalBox(CodeBox):
         codebox_cwd: str = ".codebox",
         **kwargs,
     ) -> None:
+        self.api_key = "local"
+        self.factory_id = "local"
         self.session_id = session_id or ""
         os.makedirs(codebox_cwd, exist_ok=True)
         self.cwd = os.path.abspath(codebox_cwd)
@@ -60,7 +65,7 @@ class LocalBox(CodeBox):
             fig.savefig(buf, format="png")
             buf.seek(0)
             img_str = base64.b64encode(buf.getvalue()).decode("utf-8")
-            print(f"<img src='data:image/png;base64,{img_str}' />")
+            important_print(IMAGE_PATTERN.replace("(.*?)", img_str))
             if close:
                 plt.close(fig)
 
@@ -100,23 +105,22 @@ class LocalBox(CodeBox):
                                     # todo make this more efficient?
                                     sys.stdout = _out = io.StringIO()
 
-                                    if "<img src='data:image/png;base64," in output:
-                                        image_pattern = (
-                                            r"<img src='data:image/png;base64,(.*?)' />"
-                                        )
+                                    if "<image>" in output:
                                         image_matches = re.findall(
-                                            image_pattern, output
+                                            IMAGE_PATTERN, output
                                         )
                                         for img_str in image_matches:
                                             queue.put(
                                                 ExecChunk(type="img", content=img_str)
                                             )
-                                        output = re.sub(image_pattern, "", output)
+                                        output = re.sub(IMAGE_PATTERN, "", output)
 
                                     if output:
                                         if output.startswith("Out["):
                                             # todo better disable logging somehow
-                                            output = re.sub(r"Out[(.*?)]: ", "", output)
+                                            output = re.sub(
+                                                r"Out\[(.*?)\]: ", "", output.strip()
+                                            )
                                         queue.put(ExecChunk(type="txt", content=output))
 
                                 if error := _err.getvalue():
@@ -209,14 +213,11 @@ class LocalBox(CodeBox):
                                 # todo make this more efficient?
                                 sys.stdout = temp_output = io.StringIO()
 
-                                if "<img src='data:image/png;base64," in output:
-                                    image_pattern = (
-                                        r"<img src='data:image/png;base64,(.*?)' />"
-                                    )
-                                    image_matches = re.findall(image_pattern, output)
+                                if "<image>" in output:
+                                    image_matches = re.findall(IMAGE_PATTERN, output)
                                     for img_str in image_matches:
                                         yield ExecChunk(type="img", content=img_str)
-                                    output = re.sub(image_pattern, "", output)
+                                    output = re.sub(IMAGE_PATTERN, "", output)
 
                                 if output:
                                     if output.startswith("Out["):
@@ -322,9 +323,7 @@ class LocalBox(CodeBox):
                 elif isinstance(content, bytes):
                     await file.write(content)
                 else:
-                    from builtins import print as do_not_remote_print_lol
-
-                    do_not_remote_print_lol(type(content), content.__dict__)
+                    print(type(content), content.__dict__)
                     raise TypeError("Unsupported content type")
 
             file_size = await aiofiles.os.path.getsize(file_path)
