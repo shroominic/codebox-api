@@ -223,10 +223,7 @@ class CodeBox:
         return (await self.aexec("uv pip list", kernel="bash")).text.splitlines()
 
     async def ashow_variables(self) -> dict[str, str]:
-        vars = [
-            line.strip() for line in (await self.aexec("%who")).text.strip().split("\t")
-        ]
-        # todo remove that splitting thing when Out[0] thing is fixed
+        vars = [line.strip() for line in (await self.aexec("%who")).text.strip()]
         return {v: (await self.aexec(v)).text for v in vars}
 
     async def arestart(self) -> None:
