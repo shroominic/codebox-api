@@ -9,11 +9,13 @@ from codeboxapi.utils import CodeBoxFile, ExecChunk, ExecResult
     scope="session",
     params=[
         "local",
-        # "docker",
+        "docker",
         os.getenv("CODEBOX_API_KEY"),
     ],
 )
 def codebox(request):
+    if os.system("docker ps > /dev/null 2>&1") != 0:
+        pytest.skip("Docker is not running")
     return CodeBox(api_key=request.param)  # api_key=request.param)
 
 
