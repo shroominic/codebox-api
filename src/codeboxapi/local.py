@@ -21,7 +21,8 @@ from queue import Queue
 
 from IPython.core.interactiveshell import ExecutionResult, InteractiveShell
 
-from .codebox import CodeBox, CodeBoxFile, ExecChunk
+from .codebox import CodeBox
+from .types import ExecChunk, RemoteFile
 from .utils import check_installed, raise_timeout, resolve_pathlike, run_inside
 
 IMAGE_PATTERN = r"<image>(.*?)</image>"
@@ -271,7 +272,9 @@ class LocalBox(CodeBox):
         remote_file_path: str,
         content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
+        from .types import RemoteFile
+
         with raise_timeout(timeout):
             file_path = os.path.join(self.cwd, remote_file_path)
             with open(file_path, "wb") as file:
@@ -285,20 +288,17 @@ class LocalBox(CodeBox):
                     file.write(content.read())
                 else:
                     raise TypeError("Unsupported content type")
-            file_size = os.path.getsize(file_path)
-            return CodeBoxFile(
-                remote_path=file_path,
-                size=file_size,
-                codebox_id=self.session_id,
-            )
+            return RemoteFile(path=remote_file_path, remote=self)
 
     async def aupload(
         self,
         file_name: str,
         content: t.BinaryIO | bytes | str | tmpf.SpooledTemporaryFile,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> RemoteFile:
         import aiofiles.os
+
+        from .types import RemoteFile
 
         async with asyncio.timeout(timeout):
             file_path = os.path.join(self.cwd, file_name)
@@ -325,13 +325,7 @@ class LocalBox(CodeBox):
                 else:
                     print(type(content), content.__dict__)
                     raise TypeError("Unsupported content type")
-
-            file_size = await aiofiles.os.path.getsize(file_path)
-            return CodeBoxFile(
-                remote_path=file_path,
-                size=file_size,
-                codebox_id=self.session_id,
-            )
+        return RemoteFile(path=file_path, remote=self)
 
     def stream_download(
         self,

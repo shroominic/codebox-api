@@ -1,8 +1,7 @@
 import os
 
 import pytest
-from codeboxapi import CodeBox
-from codeboxapi.utils import CodeBoxFile, ExecChunk, ExecResult
+from codeboxapi import CodeBox, ExecChunk, ExecResult, RemoteFile
 
 
 @pytest.fixture(
@@ -29,19 +28,14 @@ def test_sync_codebox_lifecycle(codebox: CodeBox):
 
     file_name = "test_file.txt"
     file_content = b"Hello World!"
-    uploaded_file = codebox.upload(file_name, file_content)
-    assert isinstance(uploaded_file, CodeBoxFile), "Upload should return a CodeBoxFile"
-    assert uploaded_file.name == file_name, "Uploaded file should have correct name"
-    assert uploaded_file.size == len(
-        file_content
-    ), "Uploaded file should have correct size"
+    codebox.upload(file_name, file_content)
 
     downloaded_file = codebox.download(file_name)
     assert isinstance(
-        downloaded_file, CodeBoxFile
-    ), "Download should return a CodeBoxFile"
+        downloaded_file, RemoteFile
+    ), "Download should return a RemoteFile"
     assert (
-        downloaded_file.content == file_content
+        downloaded_file.get_content() == file_content
     ), "Downloaded content should match uploaded content"
 
     install_result = codebox.install("matplotlib")
@@ -77,19 +71,14 @@ async def test_async_codebox_lifecycle(codebox: CodeBox):
 
     file_name = "test_file.txt"
     file_content = b"Hello World!"
-    uploaded_file = await codebox.aupload(file_name, file_content)
-    assert isinstance(uploaded_file, CodeBoxFile), "Upload should return a CodeBoxFile"
-    assert uploaded_file.name == file_name, "Uploaded file should have correct name"
-    assert uploaded_file.size == len(
-        file_content
-    ), "Uploaded file should have correct size"
+    await codebox.aupload(file_name, file_content)
 
     downloaded_file = await codebox.adownload(file_name)
     assert isinstance(
-        downloaded_file, CodeBoxFile
-    ), "Download should return a CodeBoxFile"
+        downloaded_file, RemoteFile
+    ), "Download should return a RemoteFile"
     assert (
-        await downloaded_file.acontent == file_content
+        downloaded_file.get_content() == file_content
     ), "Downloaded content should match uploaded content"
 
     install_result = await codebox.ainstall("matplotlib")
@@ -129,8 +118,8 @@ def test_sync_list_operations(codebox: CodeBox):
     files = codebox.list_files()
     assert isinstance(files, list), "list_files should return a list"
     assert all(
-        isinstance(f, CodeBoxFile) for f in files
-    ), "All items in list_files should be CodeBoxFile instances"
+        isinstance(f, RemoteFile) for f in files
+    ), "All items in list_files should be RemoteFile instances"
 
     packages = codebox.list_packages()
     assert isinstance(packages, list), "list_packages should return a list"
@@ -156,8 +145,8 @@ async def test_async_list_operations(codebox: CodeBox):
     files = await codebox.alist_files()
     assert isinstance(files, list), "list_files should return a list"
     assert all(
-        isinstance(f, CodeBoxFile) for f in files
-    ), "All items in list_files should be CodeBoxFile instances"
+        isinstance(f, RemoteFile) for f in files
+    ), "All items in list_files should be RemoteFile instances"
 
     packages = await codebox.alist_packages()
     assert isinstance(packages, list), "list_packages should return a list"
@@ -253,7 +242,7 @@ def test_sync_bash_commands(codebox: CodeBox):
     assert "ok" in result.text, "Execution should contain 'ok'"
     result = codebox.exec("echo \"print('Hello!')\" > test.py", kernel="bash")
     assert result.text.strip() == "", "Execution result should be empty"
-    assert "test.py" in [file.remote_path for file in codebox.list_files()]
+    assert "test.py" in [file.path for file in codebox.list_files()]
     result = codebox.exec("python test.py", kernel="bash")
     assert result.text.strip() == "Hello!", "Execution result should be 'Hello!'"
 
@@ -264,7 +253,7 @@ async def test_async_bash_commands(codebox: CodeBox):
     assert "ok" in result.text, "Execution should contain 'ok'"
     result = await codebox.aexec("echo 'print(\"Hello!\")' > test.py", kernel="bash")
     assert result.text.strip() == "", "Execution result should be empty"
-    assert "test.py" in [file.remote_path for file in await codebox.alist_files()]
+    assert "test.py" in [file.path for file in await codebox.alist_files()]
     result = await codebox.aexec("python test.py", kernel="bash")
     assert result.text.strip() == "Hello!", "Execution result should be 'Hello!'"
 

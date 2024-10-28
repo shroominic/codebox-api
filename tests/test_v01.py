@@ -37,7 +37,7 @@ def run_sync(codebox: CodeBox) -> bool:
         )
         assert file_name in str(codebox.list_files())
 
-        assert codebox.download(file_name).content == b"Hello World!"
+        assert codebox.download(file_name).get_content() == b"Hello World!"
         print("Downloaded")
 
         assert "matplotlib" in str(codebox.install("matplotlib"))
@@ -84,7 +84,7 @@ async def run_async(codebox: CodeBox) -> bool:
 
         assert file_name in str(await codebox.alist_files())
 
-        assert (await codebox.adownload(file_name)).content == b"Hello World!"
+        assert (await codebox.adownload(file_name)).get_content() == b"Hello World!"
         print("Downloaded")
 
         assert "matplotlib" in str(await codebox.ainstall("matplotlib"))

@@ -41,16 +41,10 @@ from importlib import import_module
 
 import anyio
 
-from .utils import (
-    CodeBoxFile,
-    CodeBoxOutput,
-    ExecChunk,
-    ExecResult,
-    async_flatten_exec_result,
-    deprecated,
-    flatten_exec_result,
-    syncify,
-)
+from .utils import async_flatten_exec_result, deprecated, flatten_exec_result, syncify
+
+if t.TYPE_CHECKING:
+    from .types import CodeBoxOutput, ExecChunk, ExecResult, RemoteFile
 
 
 class CodeBox:
@@ -92,7 +86,7 @@ class CodeBox:
         kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> ExecResult:
+    ) -> "ExecResult":
         """Execute code inside the CodeBox instance"""
         return flatten_exec_result(self.stream_exec(code, kernel, timeout, cwd))
 
@@ -102,7 +96,7 @@ class CodeBox:
         kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> t.Generator[ExecChunk, None, None]:
+    ) -> t.Generator["ExecChunk", None, None]:
         """Executes the code and streams the result."""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
@@ -111,7 +105,7 @@ class CodeBox:
         remote_file_path: str,
         content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
         """Upload a file to the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
@@ -131,7 +125,7 @@ class CodeBox:
         kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> ExecResult:
+    ) -> "ExecResult":
         """Async Execute python code inside the CodeBox instance"""
         return await async_flatten_exec_result(
             self.astream_exec(code, kernel, timeout, cwd)
@@ -143,7 +137,7 @@ class CodeBox:
         kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> t.AsyncGenerator[ExecChunk, None]:
+    ) -> t.AsyncGenerator["ExecChunk", None]:
         """Async Stream Chunks of Execute python code inside the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
@@ -152,7 +146,7 @@ class CodeBox:
         remote_file_path: str,
         content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
         """Async Upload a file to the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
 
@@ -160,10 +154,8 @@ class CodeBox:
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
-        return [
-            f for f in (await self.alist_files()) if f.remote_path == remote_file_path
-        ][0]
+    ) -> "RemoteFile":
+        return [f for f in (await self.alist_files()) if f.path in remote_file_path][0]
 
     def astream_download(
         self,
@@ -190,7 +182,9 @@ class CodeBox:
         )
         return " ".join(packages) + " installed successfully"
 
-    async def alist_files(self) -> list[CodeBoxFile]:
+    async def alist_files(self) -> list["RemoteFile"]:
+        from .types import RemoteFile
+
         files = (
             await self.aexec(
                 "find . -type f -exec du -h {} + | awk '{print $2, $1}' | sort",
@@ -198,12 +192,10 @@ class CodeBox:
             )
         ).text.splitlines()
         return [
-            CodeBoxFile(
-                remote_path=parts[0].removeprefix("./"),
-                size=self._parse_size(parts[1]),
-                codebox_id=self.session_id,
-                codebox_api_key=self.api_key,
-                codebox_factory_id=self.factory_id,
+            RemoteFile(
+                path=parts[0].removeprefix("./"),
+                remote=self,
+                _size=self._parse_size(parts[1]),
             )
             for file in files
             if (parts := file.split(" ")) and len(parts) == 2
@@ -245,7 +237,7 @@ class CodeBox:
 
     def download(
         self, remote_file_path: str, timeout: float | None = None
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
         return syncify(self.adownload)(remote_file_path, timeout)
 
     def healthcheck(self) -> str:
@@ -254,7 +246,7 @@ class CodeBox:
     def install(self, *packages: str) -> str:
         return syncify(self.ainstall)(*packages)
 
-    def list_files(self) -> list[CodeBoxFile]:
+    def list_files(self) -> list["RemoteFile"]:
         return syncify(self.alist_files)()
 
     def list_packages(self) -> list[str]:
@@ -290,7 +282,9 @@ class CodeBox:
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    async def arun(self, code: str | os.PathLike) -> CodeBoxOutput:
+    async def arun(self, code: str | os.PathLike) -> "CodeBoxOutput":
+        from .types import CodeBoxOutput
+
         exec_result = await self.aexec(code, kernel="ipython")
         if exec_result.images:
             return CodeBoxOutput(type="image/png", content=exec_result.images[0])
@@ -321,7 +315,7 @@ class CodeBox:
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    def run(self, code: str | os.PathLike) -> CodeBoxOutput:
+    def run(self, code: str | os.PathLike) -> "CodeBoxOutput":
         return syncify(self.arun)(code)
 
     @deprecated(

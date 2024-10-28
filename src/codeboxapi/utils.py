@@ -1,155 +1,23 @@
 import os
 import signal
+import typing as t
 from contextlib import contextmanager
-from dataclasses import dataclass
 from functools import partial, reduce, wraps
 from importlib.metadata import PackageNotFoundError, distribution
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncGenerator,
-    Callable,
-    Coroutine,
-    Iterator,
-    Literal,
-    NoReturn,
-    ParamSpec,
-    TypeVar,
-)
 from warnings import warn
 
 import anyio
 from anyio._core._eventloop import threadlocals
 
-if TYPE_CHECKING:
-    from .codebox import CodeBox
+if t.TYPE_CHECKING:
+    from .types import ExecChunk, ExecResult
+
+T = t.TypeVar("T")
+P = t.ParamSpec("P")
 
 
-@dataclass
-class ExecChunk:
-    """
-    A chunk of output from an execution.
-    The type is one of:
-    - txt: text output
-    - img: image output
-    - err: error output
-    """
-
-    type: Literal["txt", "img", "err"]
-    content: str
-
-
-@dataclass
-class ExecResult:
-    chunks: list[ExecChunk]
-
-    @property
-    def text(self) -> str:
-        return "".join(chunk.content for chunk in self.chunks if chunk.type == "txt")
-
-    @property
-    def images(self) -> list[str]:
-        return [chunk.content for chunk in self.chunks if chunk.type == "img"]
-
-    @property
-    def errors(self) -> list[str]:
-        return [chunk.content for chunk in self.chunks if chunk.type == "err"]
-
-
-# todo move somewhere more clean
-@dataclass
-class CodeBoxOutput:
-    """Deprecated CodeBoxOutput class"""
-
-    content: str
-    type: Literal["stdout", "stderr", "image/png", "error"]
-
-    def __str__(self) -> str:
-        return self.content
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, str):
-            return self.content == other
-        if isinstance(other, CodeBoxOutput):
-            return self.content == other.content and self.type == other.type
-        return False
-
-
-@dataclass
-class CodeBoxFile:
-    remote_path: str
-    size: int
-    codebox_id: str | None = None
-    codebox_api_key: str | None = None
-    codebox_factory_id: str | None = None
-    _content: bytes | None = None
-
-    @property
-    def codebox(self) -> "CodeBox":
-        from .codebox import CodeBox
-
-        if self.codebox_id is None:
-            raise ValueError("CodeBox ID is not set")
-        if self.codebox_api_key is None:
-            raise ValueError("CodeBox API key is not set")
-        if self.codebox_factory_id is None:
-            raise ValueError("CodeBox factory ID is not set")
-        if self.codebox_api_key == "docker":
-            from .docker import DockerBox
-
-            return DockerBox(
-                port_or_range=int(self.codebox_id),
-                image=self.codebox_factory_id,
-                start_container=False,
-            )
-        return CodeBox(
-            session_id=self.codebox_id,
-            api_key=self.codebox_api_key,
-            factory_id=self.codebox_factory_id,
-        )
-
-    @property
-    def name(self) -> str:
-        return self.remote_path.split("/")[-1]
-
-    @property
-    def content(self) -> bytes:
-        return self._content or b"".join(self.codebox.stream_download(self.remote_path))
-
-    @property
-    async def acontent(self) -> bytes:
-        return self._content or b"".join([
-            chunk async for chunk in self.codebox.astream_download(self.remote_path)
-        ])
-
-    @classmethod
-    def from_path(cls, path: str) -> "CodeBoxFile":
-        with open(path, "rb") as f:
-            return cls(
-                remote_path=path,
-                size=os.path.getsize(path),
-                _content=f.read(),
-            )
-
-    def save(self, path: str) -> None:
-        with open(path, "wb") as f:
-            for chunk in self.codebox.stream_download(self.remote_path):
-                f.write(chunk)
-
-    async def asave(self, path: str) -> None:
-        import aiofiles
-
-        async with aiofiles.open(path, "wb") as f:
-            async for chunk in self.codebox.astream_download(self.remote_path):
-                await f.write(chunk)
-
-
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-def deprecated(message: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+def deprecated(message: str) -> t.Callable[[t.Callable[P, T]], t.Callable[P, T]]:
+    def decorator(func: t.Callable[P, T]) -> t.Callable[P, T]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             if os.getenv("IGNORE_DEPRECATION_WARNINGS", "false").lower() == "true":
@@ -173,11 +41,15 @@ def resolve_pathlike(file: str | os.PathLike) -> str:
     return file
 
 
-def reduce_bytes(async_gen: Iterator[bytes]) -> bytes:
+def reduce_bytes(async_gen: t.Iterator[bytes]) -> bytes:
     return reduce(lambda x, y: x + y, async_gen)
 
 
-def flatten_exec_result(result: ExecResult | Iterator[ExecChunk]) -> ExecResult:
+def flatten_exec_result(
+    result: "ExecResult" | t.Iterator["ExecChunk"],
+) -> "ExecResult":
+    from .types import ExecResult
+
     if not isinstance(result, ExecResult):
         result = ExecResult(chunks=[c for c in result])
     # todo todo todo todo todo todo
@@ -192,8 +64,8 @@ def flatten_exec_result(result: ExecResult | Iterator[ExecChunk]) -> ExecResult:
 
 
 async def async_flatten_exec_result(
-    async_gen: AsyncGenerator[ExecChunk, None],
-) -> ExecResult:
+    async_gen: t.AsyncGenerator["ExecChunk", None],
+) -> "ExecResult":
     # todo todo todo todo todo todo
     # remove empty text chunks
     # merge text chunks
@@ -202,10 +74,14 @@ async def async_flatten_exec_result(
     # remove empty error chunks
     # merge error chunks
     # ...
+    from .types import ExecResult
+
     return ExecResult(chunks=[c async for c in async_gen])
 
 
-def syncify(async_function: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
+def syncify(
+    async_function: t.Callable[P, t.Coroutine[t.Any, t.Any, T]],
+) -> t.Callable[P, T]:
     """
     Take an async function and create a regular one that receives the same keyword and
     positional arguments, and that when called, calls the original async function in
@@ -269,5 +145,5 @@ def run_inside(directory: str):
         os.chdir(old_cwd)
 
 
-def raise_error(message: str) -> NoReturn:
+def raise_error(message: str) -> t.NoReturn:
     raise Exception(message)

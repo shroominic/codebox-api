@@ -9,7 +9,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from .local import LocalBox
-from .utils import CodeBoxFile
 
 codebox = LocalBox()
 last_interaction = datetime.utcnow()
@@ -78,10 +77,10 @@ async def upload(
     file: UploadFile,
     timeout: int | None = None,
     codebox: LocalBox = Depends(get_codebox),
-) -> "CodeBoxFile":
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="A file name is required")
-    return await codebox.aupload(file.filename, file.file, timeout)
+) -> None:
+    if file.filename:
+        await codebox.aupload(file.filename, file.file, timeout)
+    raise HTTPException(status_code=400, detail="A file name is required")
 
 
 @app.post("/code/execute")

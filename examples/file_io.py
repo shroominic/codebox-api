@@ -29,7 +29,5 @@ elif output.type == "error":
 else:
     # all files inside the codebox
     for file in codebox.list_files():
-        print("File: ", file.name)
-        print("Content is None: ", file.content is None)
-        content = codebox.download(file.name)
-        print("Content: ", content)
+        print("File: ", file.path)
+        print("Content: ", file.get_content())

@@ -1,12 +1,13 @@
 import re
+import typing as t
 from os import PathLike, getenv
-from typing import AsyncGenerator, BinaryIO, Generator, Literal
 from uuid import uuid4
 
 import anyio
 import httpx
 
-from .codebox import CodeBox, CodeBoxFile, ExecChunk
+from .codebox import CodeBox
+from .types import ExecChunk, RemoteFile
 from .utils import raise_error, resolve_pathlike
 
 
@@ -22,8 +23,8 @@ class RemoteBox(CodeBox):
     def __init__(
         self,
         session_id: str | None = None,
-        api_key: str | Literal["local", "docker"] | None = None,
-        factory_id: str | Literal["default"] | None = None,
+        api_key: str | t.Literal["local", "docker"] | None = None,
+        factory_id: str | t.Literal["default"] | None = None,
         base_url: str | None = None,
     ) -> None:
         self.session_id = session_id or uuid4().hex
@@ -48,10 +49,10 @@ class RemoteBox(CodeBox):
     def stream_exec(
         self,
         code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> Generator[ExecChunk, None, None]:
+    ) -> t.Generator[ExecChunk, None, None]:
         code = resolve_pathlike(code)
         with self.client.stream(
             method="POST",
@@ -74,10 +75,10 @@ class RemoteBox(CodeBox):
     async def astream_exec(
         self,
         code: str | PathLike,
-        kernel: Literal["ipython", "bash"] = "ipython",
+        kernel: t.Literal["ipython", "bash"] = "ipython",
         timeout: float | None = None,
         cwd: str | None = None,
-    ) -> AsyncGenerator[ExecChunk, None]:
+    ) -> t.AsyncGenerator[ExecChunk, None]:
         code = resolve_pathlike(code)
         try:
             async with self.aclient.stream(
@@ -107,58 +108,43 @@ class RemoteBox(CodeBox):
     def upload(
         self,
         file_name: str,
-        content: BinaryIO | bytes | str,
+        content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
+        from .types import RemoteFile
+
         if isinstance(content, str):
             content = content.encode("utf-8")
-        response = self.client.post(
+        self.client.post(
             url="/files/upload",
             files={"file": (file_name, content)},
             timeout=timeout,
-        )
-        json = response.json()
-        # todo fix: this is bad code
-        del json["codebox_id"]
-        del json["codebox_api_key"]
-        del json["codebox_factory_id"]
-        return CodeBoxFile(
-            **json,
-            codebox_api_key=self.api_key,
-            codebox_factory_id=self.factory_id,
-            codebox_id=self.session_id,
-        )
+        ).raise_for_status()
+        return RemoteFile(path=file_name, remote=self)
 
     async def aupload(
         self,
-        file_name: str,
-        content: BinaryIO | bytes | str,
+        remote_file_path: str,
+        content: t.BinaryIO | bytes | str,
         timeout: float | None = None,
-    ) -> CodeBoxFile:
+    ) -> "RemoteFile":
+        from .types import RemoteFile
+
         if isinstance(content, str):
             content = content.encode("utf-8")
         response = await self.aclient.post(
             url="/files/upload",
-            files={"file": (file_name, content)},
+            files={"file": (remote_file_path, content)},
             timeout=timeout,
         )
-        json = response.json()
-        # todo this is a sign of bad design
-        del json["codebox_id"]
-        del json["codebox_api_key"]
-        del json["codebox_factory_id"]
-        return CodeBoxFile(
-            **json,
-            codebox_api_key=self.api_key,
-            codebox_factory_id=self.factory_id,
-            codebox_id=self.session_id,
-        )
+        response.raise_for_status()
+        return RemoteFile(path=remote_file_path, remote=self)
 
     def stream_download(
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> Generator[bytes, None, None]:
+    ) -> t.Generator[bytes, None, None]:
         with self.client.stream(
             method="GET",
             url=f"/files/download/{remote_file_path}",
@@ -171,7 +157,7 @@ class RemoteBox(CodeBox):
         self,
         remote_file_path: str,
         timeout: float | None = None,
-    ) -> AsyncGenerator[bytes, None]:
+    ) -> t.AsyncGenerator[bytes, None]:
         async with self.aclient.stream(
             method="GET",
             url=f"/files/download/{remote_file_path}",

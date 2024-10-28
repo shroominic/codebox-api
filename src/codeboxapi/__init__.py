@@ -7,5 +7,6 @@ and interacting with Codebox instances.
 """
 
 from .codebox import CodeBox
+from .types import ExecChunk, ExecResult, RemoteFile
 
-__all__ = ["CodeBox"]
+__all__ = ["CodeBox", "ExecChunk", "ExecResult", "RemoteFile"]
