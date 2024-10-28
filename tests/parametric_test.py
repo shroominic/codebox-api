@@ -3,10 +3,10 @@ import time
 from typing import Callable
 
 import pytest
-from codeboxapi import CodeBox
-from codeboxapi.schema import CodeBoxFile, CodeBoxOutput
+from codeboxapi import CodeBox, RemoteFile
+from codeboxapi.types import CodeBoxFile, CodeBoxOutput
 
-AssertFunctionType = Callable[[CodeBoxOutput, list[CodeBoxFile]], bool]
+AssertFunctionType = Callable[[CodeBoxOutput, list[RemoteFile]], bool]
 
 code_1 = """
 import pandas as pd
@@ -121,7 +121,9 @@ async def test_boxes_async(
     packages: list[str],
     capsys: pytest.CaptureFixture,
 ) -> None:
-    codeboxes = [CodeBox(local=local) for _ in range(num_samples)]
+    codeboxes = [
+        CodeBox(api_key="local" if local else None) for _ in range(num_samples)
+    ]
 
     start_time = time.perf_counter()
     tasks = [
@@ -158,12 +160,10 @@ async def run_async(
             [file.name for file in files] + [file.name for file in orginal_files]
         ) == set([file.name for file in codebox_files])
 
-        assert all(
-            [
-                package_name in str(await codebox.ainstall(package_name))
-                for package_name in packages
-            ]
-        )
+        assert all([
+            package_name in str(await codebox.ainstall(package_name))
+            for package_name in packages
+        ])
 
         output: CodeBoxOutput = await codebox.arun(code)
         codebox_files_output = await codebox.alist_files()
