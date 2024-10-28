@@ -115,10 +115,6 @@ def check_installed(package: str) -> None:
         raise
 
 
-def debug_mode() -> bool:
-    return os.getenv("DEBUG", "false").lower() == "true"
-
-
 @contextmanager
 def raise_timeout(timeout: float | None = None):
     def timeout_handler(signum, frame):
