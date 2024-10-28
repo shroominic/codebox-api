@@ -8,11 +8,11 @@ async def main():
 
 
 async def spawn_codebox():
-    async with CodeBox() as codebox:
-        await codebox.arun("a = 'Hello World!'")
-        a = await codebox.arun("a")
-        assert a == "Hello World!"
-        print("Success!")
+    codebox = CodeBox(api_key="local")
+    await codebox.arun("a = 'Hello World!'")
+    a = await codebox.arun("a")
+    assert a == "Hello World!"
+    print("Success!")
 
 
 if __name__ == "__main__":
