@@ -50,6 +50,8 @@ class DockerBox(RemoteBox):
                     image,
                 ],
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         else:
             assert isinstance(port_or_range, int)
