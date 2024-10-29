@@ -14,7 +14,7 @@ from codeboxapi import CodeBox, ExecChunk, ExecResult, RemoteFile
     ],
 )
 def codebox(request):
-    if os.system("docker ps > /dev/null 2>&1") != 0:
+    if request.param == "docker" and os.system("docker ps > /dev/null 2>&1") != 0:
         pytest.skip("Docker is not running")
     return CodeBox(api_key=request.param)  # api_key=request.param)
 
@@ -247,8 +247,7 @@ async def test_async_stream_exec(codebox: CodeBox):
     assert all(
         chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
     ), "Chunks should arrive with delay (ipython)"
-    # Verify delay is approximately 0.03s
-
+    # Verify delay is approximately 0.01s
     assert all(
         abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
         for i in range(len(chunks) - 1)
