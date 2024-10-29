@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from os import getenv, path
 from typing import AsyncGenerator, Literal
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from .local import LocalBox
 
 codebox = LocalBox()
-last_interaction = datetime.utcnow()
+last_interaction = datetime.now(UTC)
 
 
 @asynccontextmanager
@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     async def timeout():
         if (_timeout := getenv("CODEBOX_TIMEOUT", "15")).lower() == "none":
             return
-        while last_interaction + timedelta(minutes=float(_timeout)) > datetime.utcnow():
+        while last_interaction + timedelta(minutes=float(_timeout)) > datetime.now(UTC):
             await asyncio.sleep(1)
         exit(0)
 
@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 async def get_codebox() -> AsyncGenerator[LocalBox, None]:
     global codebox, last_interaction
-    last_interaction = datetime.utcnow()
+    last_interaction = datetime.now(UTC)
     yield codebox
 
 
@@ -52,9 +52,8 @@ async def exec(
     async def event_stream() -> AsyncGenerator[str, None]:
         async for chunk in codebox.astream_exec(
             exec.code, exec.kernel, exec.timeout, exec.cwd
-        ):
-            # protocol is <type>content</type>
-            yield f"<{chunk.type}>{chunk.content}</{chunk.type}>"
+        ):  # protocol is <type>content</type>
+            yield f"<{chunk.type}>{chunk.content}</{chunk.type}>\n"
 
     return StreamingResponse(event_stream())
 
@@ -78,9 +77,10 @@ async def upload(
     timeout: int | None = None,
     codebox: LocalBox = Depends(get_codebox),
 ) -> None:
-    if file.filename:
-        await codebox.aupload(file.filename, file.file, timeout)
-    raise HTTPException(status_code=400, detail="A file name is required")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="A file name is required")
+    async with asyncio.timeout(timeout):
+        await codebox.aupload(file.filename, file.file)
 
 
 @app.post("/code/execute")
