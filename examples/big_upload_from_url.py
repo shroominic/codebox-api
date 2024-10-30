@@ -1,8 +1,8 @@
 from codeboxapi import CodeBox
 
 
-def url_upload(codebox, url: str) -> None:
-    codebox.run(
+def url_upload(codebox: CodeBox, url: str) -> None:
+    codebox.exec(
         """
 import requests
 
@@ -16,7 +16,7 @@ def download_file_from_url(url: str) -> None:
                 file.write(chunk)
         """
     )
-    print(codebox.run(f"download_file_from_url('{url}')"))
+    print(codebox.exec(f"download_file_from_url('{url}')"))
 
 
 codebox = CodeBox()
@@ -33,6 +33,6 @@ url_upload(
 )
 print(codebox.list_files())
 
-codebox.run("import os")
-print(codebox.run("print(os.listdir())"))
-print(codebox.run("print([(f, os.path.getsize(f)) for f in os.listdir('.')])"))
+codebox.exec("import os")
+print(codebox.exec("print(os.listdir())"))
+print(codebox.exec("print([(f, os.path.getsize(f)) for f in os.listdir('.')])"))

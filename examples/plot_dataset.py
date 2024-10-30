@@ -1,50 +1,34 @@
-import os
+import base64
+from io import BytesIO
 from pathlib import Path
 
 import httpx
 from codeboxapi import CodeBox
+from PIL import Image
 
 codebox = CodeBox(api_key="local")
 
 # download the iris dataset
-csv_bytes = httpx.get(
+iris_csv_bytes = httpx.get(
     "https://archive.ics.uci.edu/" "ml/machine-learning-databases/iris/iris.data"
 ).content
 
 # upload the dataset to the codebox
-codebox.upload("iris.csv", csv_bytes)
+codebox.upload("iris.csv", iris_csv_bytes)
 
 # dataset analysis code
 file_path = Path("examples/assets/dataset_code.txt")
 
 # run the code
-output = codebox.run(code=file_path)
-print(output)
-print(output.type)
+output = codebox.exec(file_path)
 
-if output.type == "image" and os.environ.get("CODEBOX_TEST") == "False":
-    try:
-        from PIL import Image  # type: ignore
-    except ImportError:
-        print(
-            "Please install it with "
-            '`pip install "codeboxapi[image_support]"`'
-            " to display images."
-        )
-        exit(1)
-
-    # Convert the image content ( bytes) into an image
-    import base64
-    from io import BytesIO
-
-    img_bytes = base64.b64decode(output.content)
+if output.images:
+    img_bytes = base64.b64decode(output.images[0])
     img_buffer = BytesIO(img_bytes)
 
     # Display the image
     img = Image.open(img_buffer)
     img.show()
 
-elif output.type == "error":
-    # error output
-    print("Error:")
-    print(output.content)
+elif output.errors:
+    print("Error:", output.errors)

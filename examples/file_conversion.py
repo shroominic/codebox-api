@@ -14,7 +14,7 @@ codebox.install("pandas")
 codebox.install("openpyxl")
 
 # convert dataset csv to excel
-output = codebox.run(
+output = codebox.exec(
     "import pandas as pd\n\n"
     "df = pd.read_csv('iris.csv', header=None)\n\n"
     "df.to_excel('iris.xlsx', index=False)\n"
@@ -22,12 +22,12 @@ output = codebox.run(
 )
 
 # check output type
-if output.type == "image/png":
+if output.images:
     print("This should not happen")
-elif output.type == "error":
-    print("Error: ", output.content)
+elif output.errors:
+    print("Error: ", output.errors)
 else:
     # all files inside the codebox
     for file in codebox.list_files():
         print("File: ", file.path)
-        print("Content: ", file.get_content())
+        print("File Size: ", file.get_size())
