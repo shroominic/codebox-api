@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from codeboxapi import CodeBox
 
 LOCALBOX = CodeBox(api_key="local")

@@ -3,8 +3,9 @@ from io import BytesIO
 from pathlib import Path
 
 import httpx
-from codeboxapi import CodeBox
 from PIL import Image
+
+from codeboxapi import CodeBox
 
 codebox = CodeBox(api_key="local")
 
