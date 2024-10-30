@@ -32,11 +32,27 @@ class LocalBox(CodeBox):
     """
     LocalBox is a CodeBox implementation that runs code locally using IPython.
     This is useful for testing and development.
+
+    Only one instance can exist at a time. For parallel execution, use:
+    - DockerBox for local parallel execution
+    - Get an API key at codeboxapi.com for hosted parallel execution
     """
 
+    _instance: t.Optional["LocalBox"] = None
+
     def __new__(cls, *args, **kwargs) -> "LocalBox":
-        # This is a hack to ignore the CodeBox.__new__ factory method.
-        return object.__new__(cls)
+        if cls._instance:
+            raise RuntimeError(
+                "Only one LocalBox instance can exist at a time.\n"
+                "For parallel execution use:\n"
+                "- Use DockerBox for local parallel execution\n"
+                "- Get an API key at https://codeboxapi.com for secure remote execution"
+            )
+
+        # This is a hack to ignore the CodeBox.__new__ factory method
+        instance = object.__new__(cls)
+        cls._instance = instance
+        return instance
 
     def __init__(
         self,
