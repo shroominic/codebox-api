@@ -11,7 +11,7 @@ Usage
 
     from codeboxapi import CodeBox
 
-    codebox = CodeBox.create(api_key="local")
+    codebox = CodeBox(api_key="local")
 
     codebox.healthcheck()
     codebox.exec("print('Hello World!')")
@@ -24,7 +24,7 @@ Usage
 
     from codeboxapi import CodeBox
 
-    codebox = CodeBox.create(api_key="local")
+    codebox = CodeBox(api_key="local")
 
     await codebox.ahealthcheck()
     await codebox.aexec("print('Hello World!')")
