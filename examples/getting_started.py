@@ -17,9 +17,11 @@ codebox.upload("example.txt", b"Hello from CodeBox!")
 # Download a file
 downloaded = codebox.download("example.txt")
 content = downloaded.get_content()  # Returns b"Hello from CodeBox!"
+print("Content:\n", content, sep="")
 
 # List files
-files = codebox.list_files()  # Returns list[RemoteFile]
+files = codebox.list_files()
+print("\nFiles:\n", "\n".join(f.__repr__() for f in files), sep="")
 
 # 3. Package Management
 # Install packages
@@ -27,6 +29,7 @@ codebox.install("pandas")
 
 # List installed packages
 packages = codebox.list_packages()
+print("\nFirst 10 packages:\n", "\n".join(packages[:10]), sep="")
 
 # 4. Variable Management
 # Execute code that creates variables
@@ -38,7 +41,7 @@ name = "Alice"
 
 # Show all variables
 variables = codebox.show_variables()
-print(variables)  # Shows dict with all variables and their values
+print("\nVariables:\n", "\n".join(f"{k}={v}" for k, v in variables.items()), sep="")
 
 # 5. Plotting with Matplotlib
 plot_code = """
@@ -59,6 +62,8 @@ for i in range(5):
     import time
     time.sleep(1)
 """):
+    # will not print when using "local" as api_key
+    # due to stdout being captured in the background
     print(chunk.content, end="")
 
 # 7. Bash Commands
@@ -73,4 +78,4 @@ codebox.exec("python script.py", kernel="bash")
 # 8. Error Handling
 result = codebox.exec("1/0")
 if result.errors:
-    print("Error occurred:", result.errors[0])
+    print("\nError occurred:", result.errors[0])
