@@ -1,6 +1,6 @@
 [project]
 name = "codeboxapi"
-version = "0.1.21"
+version = "0.2.0"
 description = "CodeBox gives you an easy scalable and isolated python interpreter for your LLM Agents."
 keywords = [
     "codeboxapi",
@@ -8,15 +8,14 @@ keywords = [
     "codebox-api",
     "language model",
     "codeinterpreterapi",
+    "code sandbox",
+    "codebox",
+    "agent infrastructure",
+    "agents",
+    "agent sandbox",
 ]
 authors = [{ name = "Shroominic", email = "contact@shroominic.com" }]
-dependencies = [
-    "pydantic>=2",
-    "pydantic-settings>=2",
-    "requests>=2",
-    "aiohttp>=3.9",
-    "websockets>=12",
-]
+dependencies = ["httpx>=0.27"]
 readme = "README.md"
 requires-python = ">= 3.9"
 license = { text = "MIT" }
@@ -34,22 +33,50 @@ build-backend = "hatchling.build"
 managed = true
 dev-dependencies = [
     "codeboxapi[all]",
-    "mypy>=1.8",
-    "ruff>=0.1",
-    "pytest>=7.4",
-    "pre-commit>=3.5",
-    "neoteroi-mkdocs>=1",
-    "mkdocs-material>=9",
-    "types-requests>=2.31",
-    "matplotlib>=3.8.2",
-    "pip",
-    "pytest-asyncio>=0.23.7",
+    "codeboxapi[docs]",
+    "codeboxapi[pytest]",
+    "codeboxapi[serve]",
+    "ruff",
+    "mypy",
+    "types-aiofiles>=24",
 ]
 
 [project.optional-dependencies]
-all = ["jupyter-kernel-gateway>=2.5, <3", "Pillow>=10"]
-local_support = ["jupyter-kernel-gateway>=2.5, <3"]
-image_support = ["Pillow>=10"]
+docs = ["neoteroi-mkdocs", "mkdocs-material"]
+pytest = ["pytest-asyncio"]
+local = ["jupyter-client", "ipykernel", "uv", "aiofiles"]
+vision = ["Pillow"]
+serve = ["fastapi[standard]"]
+data-science = [
+    "codeboxapi[local]",
+    "codeboxapi[vision]",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "uv",
+    "bokeh",
+    "dash",
+    "matplotlib",
+    "networkx",
+    "numpy",
+    "openpyxl",
+    "pandas",
+    "pillow",
+    "plotly",
+    "python-docx",
+    "scikit-learn",
+    "scipy",
+    "seaborn",
+    "statsmodels",
+    "sympy",
+    "yfinance",
+]
+all = ["codeboxapi[data-science]", "codeboxapi[serve]"]
+
+[project.scripts]
+codeboxapi-serve = "codeboxapi.api:serve"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -60,5 +87,9 @@ packages = ["src/codeboxapi"]
 [tool.pytest.ini_options]
 filterwarnings = "ignore::DeprecationWarning"
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "F", "I"]
+ignore = ["E701"]
+
+[tool.ruff.format]
+preview = true

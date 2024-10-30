@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "bash ./scripts/dev-setup.sh",
+            "group": "build",
+            "label": "dev-setup",
+            "runOptions": {
+                "runOn": "default"
+            }
+        }
+    ]
+}

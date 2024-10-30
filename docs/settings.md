@@ -5,6 +5,7 @@
 The configuration settings are encapsulated within the `CodeBoxSettings` class, which inherits from Pydantic's `BaseSettings` class.
 
 `codeboxapi/config.py`
+
 ```python
 class CodeBoxSettings(BaseSettings):
     ...
@@ -22,7 +23,7 @@ class CodeBoxSettings(BaseSettings):
 
 ### CodeBox API Settings
 
-- `CODEBOX_API_KEY: Optional[str] = None`
+- `CODEBOX_API_KEY: str | None = None`
   The API key for CodeBox.
 
 - `CODEBOX_BASE_URL: str = "https://codeboxapi.com/api/v1"`

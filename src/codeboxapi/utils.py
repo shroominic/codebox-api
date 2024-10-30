@@ -1,202 +1,145 @@
-"""Utility functions for API requests"""
+import os
+import signal
+import typing as t
+from contextlib import contextmanager
+from functools import partial, reduce, wraps
+from importlib.metadata import PackageNotFoundError, distribution
+from warnings import warn
 
-import json
-from asyncio import sleep as asleep
-from io import BytesIO
-from time import sleep
-from typing import Optional
+import anyio
+from anyio._core._eventloop import threadlocals
 
-import requests
-from aiohttp import ClientError, ClientResponse, ClientSession, ClientTimeout, FormData
-from aiohttp.payload import BytesIOPayload
+if t.TYPE_CHECKING:
+    from .types import ExecChunk, ExecResult
 
-from codeboxapi.config import settings
-from codeboxapi.errors import CodeBoxError
-
-
-def build_request_data(
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-) -> dict:
-    """
-    Builds a request data dictionary for the requests library.
-    """
-    return {
-        "method": method,
-        "url": settings.CODEBOX_BASE_URL + endpoint,
-        "headers": {
-            "Authorization": f"Bearer {settings.CODEBOX_API_KEY}",
-        },
-        "json": body,
-        "files": files,
-    }
+T = t.TypeVar("T")
+P = t.ParamSpec("P")
 
 
-def handle_response(response: requests.Response):
-    """
-    Handles a response from the requests library.
-    """
-    handlers = {
-        "application/json": lambda r: json.loads(r.content.decode()),
-        "application/octet-stream": lambda r: {
-            "content": BytesIO(r.content).read(),
-            "name": r.headers["Content-Disposition"].split("=")[1],
-        },
-        # Add other content type handlers here
-    }
-    handler = handlers.get(
-        response.headers["Content-Type"].split(";")[0], lambda r: r.content.decode()
-    )
-    if response.status_code != 200:
-        try:
-            json_body = response.json()
-        except Exception:
-            json_body = {"": response.text}
-        raise CodeBoxError(
-            http_status=response.status_code,
-            json_body=json_body,
-            headers=dict(response.headers.items()),
-        )
-    return handler(response)
-
-
-async def handle_response_async(response: ClientResponse) -> dict:
-    """
-    Handles a response from the aiohttp library.
-    """
-
-    async def json_handler(r: ClientResponse) -> dict:
-        return json.loads(await r.text())
-
-    async def file_handler(r: ClientResponse) -> dict:
-        return {
-            "content": await r.read(),
-            "name": r.headers["Content-Disposition"].split("=")[1],
-        }
-
-    async def default_handler(r: ClientResponse) -> dict:
-        return {"content": await r.text()}
-
-    handlers = {
-        "application/json": json_handler,
-        "application/octet-stream": file_handler,
-        # Add other content type handlers here
-    }
-    if response.status != 200:
-        try:
-            json_body = await response.json()
-        except Exception:
-            json_body = {"": await response.text()}
-
-        raise CodeBoxError(
-            http_status=response.status,
-            json_body=json_body,
-            headers=dict(response.headers.items()),
-        )
-    handler = handlers.get(
-        response.headers["Content-Type"].split(";")[0], default_handler
-    )
-    return await handler(response)
-
-
-def base_request(
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-    timeout: int = 420,
-    retries: int = 3,
-    backoff_factor: float = 0.3,
-) -> dict:
-    """
-    Makes a request to the CodeBox API with retry logic.
-
-    Args:
-    - method: HTTP method as a string.
-    - endpoint: API endpoint as a string.
-    - body: Optional dictionary containing the JSON body.
-    - files: Optional dictionary containing file data.
-    - retries: Maximum number of retries on failure.
-    - backoff_factor: Multiplier for delay between retries (exponential backoff).
-
-    Returns:
-    - A dictionary response from the API.
-    """
-    request_data = build_request_data(method, endpoint, body, files)
-    for attempt in range(retries):
-        try:
-            response = requests.request(**request_data, timeout=timeout)
-            return handle_response(response)
-        except requests.RequestException as e:
-            if attempt < retries - 1:
-                sleep_time = backoff_factor * (2**attempt)
-                sleep(sleep_time)
-            else:
-                raise e
-    raise CodeBoxError(http_status=500, json_body={"error": "Max retries exceeded"})
-
-
-async def abase_request(
-    session: ClientSession,
-    method: str,
-    endpoint: str,
-    body: Optional[dict] = None,
-    files: Optional[dict] = None,
-    timeout: int = 420,
-    retries: int = 3,
-    backoff_factor: float = 0.3,
-) -> dict:
-    """
-    Makes an asynchronous request to the CodeBox API with retry functionality.
-
-    Args:
-    - session: The aiohttp ClientSession.
-    - method: HTTP method as a string.
-    - endpoint: API endpoint as a string.
-    - body: Optional dictionary containing the JSON body.
-    - files: Optional dictionary containing file data.
-    - retries: Maximum number of retries on failure.
-    - backoff_factor: Multiplier for delay between retries (exponential backoff).
-
-    Returns:
-    - A dictionary response from the API.
-    """
-    request_data = build_request_data(method, endpoint, body, files)
-    if files is not None:
-        data = FormData()
-        for key, file_tuple in files.items():
-            filename, fileobject = file_tuple[
-                :2
-            ]  # Get the filename and fileobject from the tuple
-            payload = BytesIOPayload(BytesIO(fileobject))
-            data.add_field(
-                key, payload, filename=filename
-            )  # Use the filename from the tuple
-        request_data.pop("files")
-        request_data.pop("json")
-        request_data["data"] = data
-    else:
-        request_data.pop("files")
-
-    for attempt in range(retries):
-        try:
-            response = await session.request(
-                **request_data, timeout=ClientTimeout(total=timeout)
+def deprecated(message: str) -> t.Callable[[t.Callable[P, T]], t.Callable[P, T]]:
+    def decorator(func: t.Callable[P, T]) -> t.Callable[P, T]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            if os.getenv("IGNORE_DEPRECATION_WARNINGS", "false").lower() == "true":
+                return func(*args, **kwargs)
+            warn(
+                f"{func.__name__} is deprecated. {message}",
+                DeprecationWarning,
+                stacklevel=2,
             )
-            return await handle_response_async(response)
-        except ClientError as e:
-            if attempt < retries - 1:
-                sleep_time = backoff_factor * (2**attempt)
-                await asleep(sleep_time)
-            else:
-                raise e
-    raise CodeBoxError(http_status=500, json_body={"error": "Max retries exceeded"})
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
-def set_api_key(api_key: str) -> None:
+def resolve_pathlike(file: str | os.PathLike) -> str:
+    if isinstance(file, os.PathLike):
+        with open(file, "r") as f:
+            return f.read()
+    return file
+
+
+def reduce_bytes(async_gen: t.Iterator[bytes]) -> bytes:
+    return reduce(lambda x, y: x + y, async_gen)
+
+
+def flatten_exec_result(
+    result: "ExecResult" | t.Iterator["ExecChunk"],
+) -> "ExecResult":
+    from .types import ExecResult
+
+    if not isinstance(result, ExecResult):
+        result = ExecResult(chunks=[c for c in result])
+    # todo todo todo todo todo todo
+    # remove empty text chunks
+    # merge text chunks
+    # remove empty stream chunks
+    # merge stream chunks
+    # remove empty error chunks
+    # merge error chunks
+    # ...
+    return result
+
+
+async def async_flatten_exec_result(
+    async_gen: t.AsyncGenerator["ExecChunk", None],
+) -> "ExecResult":
+    # todo todo todo todo todo todo
+    # remove empty text chunks
+    # merge text chunks
+    # remove empty stream chunks
+    # merge stream chunks
+    # remove empty error chunks
+    # merge error chunks
+    # ...
+    from .types import ExecResult
+
+    return ExecResult(chunks=[c async for c in async_gen])
+
+
+def syncify(
+    async_function: t.Callable[P, t.Coroutine[t.Any, t.Any, T]],
+) -> t.Callable[P, T]:
     """
-    Manually set the CODEBOX_API_KEY.
+    Take an async function and create a regular one that receives the same keyword and
+    positional arguments, and that when called, calls the original async function in
+    the main async loop from the worker thread using `anyio.to_thread.run()`.
     """
-    settings.CODEBOX_API_KEY = api_key
+
+    @wraps(async_function)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        partial_f = partial(async_function, *args, **kwargs)
+
+        if not getattr(threadlocals, "current_async_backend", None):
+            return anyio.run(partial_f)
+        return anyio.from_thread.run(partial_f)
+
+    return wrapper
+
+
+def check_installed(package: str) -> None:
+    """
+    Check if the given package is installed.
+    """
+    try:
+        distribution(package)
+    except PackageNotFoundError:
+        if os.getenv("DEBUG", "false").lower() == "true":
+            print(
+                f"\nMake sure '{package}' is installed "
+                "when using without a CODEBOX_API_KEY.\n"
+                f"You can install it with 'pip install {package}'.\n"
+            )
+        raise
+
+
+@contextmanager
+def raise_timeout(timeout: float | None = None):
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Execution timed out")
+
+    if timeout is not None:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(int(timeout))
+
+    try:
+        yield
+    finally:
+        if timeout is not None:
+            signal.alarm(0)
+
+
+@contextmanager
+def run_inside(directory: str):
+    old_cwd = os.getcwd()
+    os.chdir(directory)
+    try:
+        yield
+    finally:
+        os.chdir(old_cwd)
+
+
+def raise_error(message: str) -> t.NoReturn:
+    raise Exception(message)

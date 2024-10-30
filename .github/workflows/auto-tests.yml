@@ -2,7 +2,7 @@ name: 🔁 Pytest ⏳x60
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/60 * * * *"
 
 jobs:
   test:
@@ -14,9 +14,7 @@ jobs:
         with:
           enable_cache: true
           cache_prefix: "venv-codeboxapi"
-      - name: Sync rye
-        run: rye sync
-      - name: Run Pytest
+      - run: rye sync
+      - run: rye run pytest
         env:
           CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
-        run: rye run pytest
