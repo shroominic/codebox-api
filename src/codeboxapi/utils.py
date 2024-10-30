@@ -7,13 +7,14 @@ from importlib.metadata import PackageNotFoundError, distribution
 from warnings import warn
 
 import anyio
+import typing_extensions as te
 from anyio._core._eventloop import threadlocals
 
 if t.TYPE_CHECKING:
     from .types import ExecChunk, ExecResult
 
 T = t.TypeVar("T")
-P = t.ParamSpec("P")
+P = te.ParamSpec("P")
 
 
 def deprecated(message: str) -> t.Callable[[t.Callable[P, T]], t.Callable[P, T]]:
