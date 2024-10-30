@@ -211,11 +211,18 @@ class CodeBox:
             return -1
 
     async def alist_packages(self) -> list[str]:
-        return (await self.aexec("uv pip list", kernel="bash")).text.splitlines()
+        return (
+            await self.aexec(
+                "uv pip list | tail -n +3 | cut -d ' ' -f 1",
+                kernel="bash",
+            )
+        ).text.splitlines()
 
     async def ashow_variables(self) -> dict[str, str]:
-        vars = [line.strip() for line in (await self.aexec("%who")).text.strip()]
-        return {v: (await self.aexec(v)).text for v in vars}
+        vars = [
+            line.strip() for line in (await self.aexec("%who")).text.strip().split()
+        ]
+        return {v: (await self.aexec(f"print({v}, end='')")).text for v in vars}
 
     async def arestart(self) -> None:
         """Restart the Jupyter kernel"""
