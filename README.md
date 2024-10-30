@@ -7,7 +7,6 @@
 
 CodeBox is the simplest cloud infrastructure for your LLM Apps and Services.
 It allows you to run python code in an isolated/sandboxed environment.
-Additionally, it provides simple fileIO (and vector database support coming soon).
 
 ## Installation
 
