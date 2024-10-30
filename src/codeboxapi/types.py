@@ -49,6 +49,14 @@ class RemoteFile:
             async for chunk in self.remote.astream_download(self.path):
                 await f.write(chunk)
 
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        if self._size is None:
+            return f"RemoteFile({self.path})"
+        return f"RemoteFile({self.path}, {self._size} bytes)"
+
 
 @dataclass
 class ExecChunk:
