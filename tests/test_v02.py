@@ -145,11 +145,7 @@ async def test_async_list_operations(codebox: CodeBox):
 def test_sync_stream_exec(codebox: CodeBox):
     chunks: list[tuple[ExecChunk, float]] = []
     t0 = time.perf_counter()
-    sleep = 0.5
-    if codebox.api_key == "local":
-        sleep = 0.01
-    if codebox.api_key == "docker":
-        sleep = 0.05
+    sleep = 0.01 if codebox.api_key == "local" else 1
     for chunk in codebox.stream_exec(
         f"import time;\nfor i in range(3): time.sleep({sleep}); print(i)"
     ):
@@ -181,11 +177,7 @@ def test_sync_stream_exec(codebox: CodeBox):
 async def test_sync_stream_exec_ipython(codebox: CodeBox):
     chunks = []
     t0 = time.perf_counter()
-    sleep = 0.5
-    if codebox.api_key == "local":
-        sleep = 0.01
-    if codebox.api_key == "docker":
-        sleep = 0.05
+    sleep = 0.01 if codebox.api_key == "local" else 1
     for chunk in codebox.stream_exec(
         f"python -u -c 'import time\nfor i in range(3): time.sleep({sleep}); print(i)'",
         kernel="bash",
@@ -218,11 +210,7 @@ async def test_sync_stream_exec_ipython(codebox: CodeBox):
 async def test_async_stream_exec_ipython(codebox: CodeBox):
     chunks: list[tuple[ExecChunk, float]] = []
     t0 = time.perf_counter()
-    sleep = 0.5
-    if codebox.api_key == "local":
-        sleep = 0.01
-    if codebox.api_key == "docker":
-        sleep = 0.05
+    sleep = 0.01 if codebox.api_key == "local" else 1
     async for chunk in codebox.astream_exec(
         f"import time;\nfor i in range(3): time.sleep({sleep}); print(i)",
     ):
@@ -254,11 +242,7 @@ async def test_async_stream_exec_ipython(codebox: CodeBox):
 async def test_async_stream_exec_bash(codebox: CodeBox):
     chunks = []
     t0 = time.perf_counter()
-    sleep = 0.5
-    if codebox.api_key == "local":
-        sleep = 0.01
-    if codebox.api_key == "docker":
-        sleep = 0.05
+    sleep = 0.01 if codebox.api_key == "local" else 1
     async for chunk in codebox.astream_exec(
         f"python -u -c 'import time\nfor i in range(3): time.sleep({sleep}); print(i)'",
         kernel="bash",
