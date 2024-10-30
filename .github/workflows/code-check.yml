@@ -19,7 +19,7 @@ jobs:
       - name: Sync rye
         run: rye sync
       - name: Run ruff
-        run: rye run ruff
+        run: rye run ruff check
       - name: Run tests
         env:
           CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}
