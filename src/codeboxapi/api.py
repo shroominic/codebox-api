@@ -53,7 +53,7 @@ async def exec(
         async for chunk in codebox.astream_exec(
             exec.code, exec.kernel, exec.timeout, exec.cwd
         ):  # protocol is <type>content</type>
-            yield f"<{chunk.type}>{chunk.content}</{chunk.type}>\n"
+            yield f"<{chunk.type}>{chunk.content}</{chunk.type}>"
 
     return StreamingResponse(event_stream())
 
