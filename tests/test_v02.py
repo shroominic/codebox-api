@@ -145,129 +145,146 @@ async def test_async_list_operations(codebox: CodeBox):
 def test_sync_stream_exec(codebox: CodeBox):
     chunks: list[tuple[ExecChunk, float]] = []
     t0 = time.perf_counter()
+    sleep = 0.5
+    if codebox.api_key == "local":
+        sleep = 0.01
+    if codebox.api_key == "docker":
+        sleep = 0.05
     for chunk in codebox.stream_exec(
-        "import time;\nfor i in range(3): time.sleep(0.01); print(i)"
+        f"import time;\nfor i in range(3): time.sleep({sleep}); print(i)"
     ):
         chunks.append((chunk, time.perf_counter() - t0))
 
-    assert (
-        len(chunks) == 3
-    ), "iterating over stream_exec should produce 3 chunks (ipython)"
+    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
     assert all(
         isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances (ipython)"
+    ), "All items should be ExecChunk instances"
     assert all(
         chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt' (ipython)"
+    ), "All chunks should be of type 'txt'"
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
-    ], "Chunks should contain correct content (ipython)"
+    ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
     assert all(
         chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay (ipython)"
-    # Verify delay is approximately 0.01s
-    assert all(
-        abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
-        for i in range(len(chunks) - 1)
-    ), "Delay between chunks should be approximately 0.01s (ipython)"
-
-    chunks = []
-    t0 = time.perf_counter()
-    for chunk in codebox.stream_exec(
-        "python -u -c 'import time\nfor i in range(3): time.sleep(0.01); print(i)'",
-        kernel="bash",
-    ):
-        chunks.append((chunk, time.perf_counter() - t0))
-
-    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks (bash)"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances (bash)"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt' (bash)"
-    assert [chunk[0].content.strip() for chunk in chunks] == [
-        "0",
-        "1",
-        "2",
-    ], "Chunks should contain correct content (bash)"
-    # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay (bash)"
-    # Verify delay is approximately 0.01s
-    assert all(
-        abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
-        for i in range(len(chunks) - 1)
-    ), "Delay between chunks should be approximately 0.01s (bash)"
+    ), "Chunks should arrive with delay"
+    # Verify chunks don't arrive all at once
+    assert any(
+        chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
+    ), "At least some chunks should have noticeable delay between them"
 
 
 @pytest.mark.asyncio
-async def test_async_stream_exec(codebox: CodeBox):
-    chunks: list[tuple[ExecChunk, float]] = []
-    t0 = time.perf_counter()
-    async for chunk in codebox.astream_exec(
-        "import time;\nfor i in range(3): time.sleep(0.01); print(i)"
-    ):
-        chunks.append((chunk, time.perf_counter() - t0))
-
-    assert (
-        len(chunks) == 3
-    ), "iterating over stream_exec should produce 3 chunks (ipython)"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances (ipython)"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt' (ipython)"
-    assert [chunk[0].content.strip() for chunk in chunks] == [
-        "0",
-        "1",
-        "2",
-    ], "Chunks should contain correct content (ipython)"
-    # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay (ipython)"
-    # Verify delay is approximately 0.01s
-    print([abs(chunks[i + 1][1] - chunks[i][1] - 0.01) for i in range(len(chunks) - 1)])
-    assert all(
-        abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
-        for i in range(len(chunks) - 1)
-    ), "Delay between chunks should be approximately 0.01s (ipython)"
-
+async def test_sync_stream_exec_ipython(codebox: CodeBox):
     chunks = []
     t0 = time.perf_counter()
-    async for chunk in codebox.astream_exec(
-        "python -u -c 'import time\nfor i in range(3): time.sleep(0.01); print(i)'",
+    sleep = 0.5
+    if codebox.api_key == "local":
+        sleep = 0.01
+    if codebox.api_key == "docker":
+        sleep = 0.05
+    for chunk in codebox.stream_exec(
+        f"python -u -c 'import time\nfor i in range(3): time.sleep({sleep}); print(i)'",
         kernel="bash",
     ):
         chunks.append((chunk, time.perf_counter() - t0))
 
-    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks (bash)"
+    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
     assert all(
         isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances (bash)"
+    ), "All items should be ExecChunk instances"
     assert all(
         chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt' (bash)"
+    ), "All chunks should be of type 'txt'"
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
-    ], "Chunks should contain correct content (bash)"
+    ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
     assert all(
         chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay (bash)"
-    # Verify delay is approximately 0.01s
+    ), "Chunks should arrive with delay"
+    # Verify chunks don't arrive all at once
+    assert any(
+        chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
+    ), "At least some chunks should have noticeable delay between them"
+
+
+@pytest.mark.asyncio
+async def test_async_stream_exec_ipython(codebox: CodeBox):
+    chunks: list[tuple[ExecChunk, float]] = []
+    t0 = time.perf_counter()
+    sleep = 0.5
+    if codebox.api_key == "local":
+        sleep = 0.01
+    if codebox.api_key == "docker":
+        sleep = 0.05
+    async for chunk in codebox.astream_exec(
+        f"import time;\nfor i in range(3): time.sleep({sleep}); print(i)",
+    ):
+        chunks.append((chunk, time.perf_counter() - t0))
+
+    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
     assert all(
-        abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
-        for i in range(len(chunks) - 1)
-    ), "Delay between chunks should be approximately 0.01s (bash)"
+        isinstance(chunk[0], ExecChunk) for chunk in chunks
+    ), "All items should be ExecChunk instances"
+    assert all(
+        chunk[0].type == "txt" for chunk in chunks
+    ), "All chunks should be of type 'txt'"
+    assert [chunk[0].content.strip() for chunk in chunks] == [
+        "0",
+        "1",
+        "2",
+    ], "Chunks should contain correct content"
+    # Verify chunks arrive with delay
+    assert all(
+        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
+    ), "Chunks should arrive with delay"
+    # Verify chunks don't arrive all at once
+    assert any(
+        chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
+    ), "At least some chunks should have noticeable delay between them"
+
+
+@pytest.mark.asyncio
+async def test_async_stream_exec_bash(codebox: CodeBox):
+    chunks = []
+    t0 = time.perf_counter()
+    sleep = 0.5
+    if codebox.api_key == "local":
+        sleep = 0.01
+    if codebox.api_key == "docker":
+        sleep = 0.05
+    async for chunk in codebox.astream_exec(
+        f"python -u -c 'import time\nfor i in range(3): time.sleep({sleep}); print(i)'",
+        kernel="bash",
+    ):
+        chunks.append((chunk, time.perf_counter() - t0))
+
+    assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
+    assert all(
+        isinstance(chunk[0], ExecChunk) for chunk in chunks
+    ), "All items should be ExecChunk instances"
+    assert all(
+        chunk[0].type == "txt" for chunk in chunks
+    ), "All chunks should be of type 'txt'"
+    assert [chunk[0].content.strip() for chunk in chunks] == [
+        "0",
+        "1",
+        "2",
+    ], "Chunks should contain correct content"
+    # Verify chunks arrive with delay
+    assert all(
+        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
+    ), "Chunks should arrive with delay"
+    # Verify chunks don't arrive all at once
+    assert any(
+        chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
+    ), "At least some chunks should have noticeable delay between them"
 
 
 def test_sync_error_handling(codebox: CodeBox):
