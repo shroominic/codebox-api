@@ -1,22 +1,8 @@
-import asyncio
-import os
-
+import pytest
 from codeboxapi import CodeBox
 
 
-def test_codebox():
-    codebox = CodeBox(api_key=os.getenv("CODEBOX_API_KEY"))
-    assert run_sync(codebox), "Failed to run sync codebox remotely"
-    assert asyncio.run(run_async(codebox)), "Failed to run async codebox remotely"
-
-
-def test_localbox():
-    codebox = CodeBox(api_key="local")
-    assert run_sync(codebox), "Failed to run sync codebox locally"
-    assert asyncio.run(run_async(codebox)), "Failed to run async codebox locally"
-
-
-def run_sync(codebox: CodeBox) -> bool:
+def test_sync(codebox: CodeBox) -> None:
     try:
         assert codebox.start() == "started"
         print("Started")
@@ -59,10 +45,9 @@ def run_sync(codebox: CodeBox) -> bool:
         assert codebox.stop() == "stopped"
         print("Stopped")
 
-    return True
 
-
-async def run_async(codebox: CodeBox) -> bool:
+@pytest.mark.asyncio
+async def test_async(codebox: CodeBox) -> None:
     try:
         assert await codebox.astart() == "started"
         print("Started")
@@ -107,10 +92,3 @@ async def run_async(codebox: CodeBox) -> bool:
     finally:
         assert await codebox.astop() == "stopped"
         print("Stopped")
-
-    return True
-
-
-if __name__ == "__main__":
-    test_codebox()
-    test_localbox()

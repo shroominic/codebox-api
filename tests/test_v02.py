@@ -1,22 +1,7 @@
-import os
 import time
 
 import pytest
 from codeboxapi import CodeBox, ExecChunk, ExecResult, RemoteFile
-
-
-@pytest.fixture(
-    scope="session",
-    params=[
-        "local",
-        "docker",
-        os.getenv("CODEBOX_API_KEY"),
-    ],
-)
-def codebox(request):
-    if request.param == "docker" and os.system("docker ps > /dev/null 2>&1") != 0:
-        pytest.skip("Docker is not running")
-    return CodeBox(api_key=request.param)  # api_key=request.param)
 
 
 def test_sync_codebox_lifecycle(codebox: CodeBox):
@@ -248,6 +233,7 @@ async def test_async_stream_exec(codebox: CodeBox):
         chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
     ), "Chunks should arrive with delay (ipython)"
     # Verify delay is approximately 0.01s
+    print([abs(chunks[i + 1][1] - chunks[i][1] - 0.01) for i in range(len(chunks) - 1)])
     assert all(
         abs(chunks[i + 1][1] - chunks[i][1] - 0.01) < 0.005
         for i in range(len(chunks) - 1)
@@ -322,6 +308,20 @@ async def test_async_bash_commands(codebox: CodeBox):
     assert "test.py" in [file.path for file in await codebox.alist_files()]
     result = await codebox.aexec("python test.py", kernel="bash")
     assert result.text.strip() == "Hello!", "Execution result should be 'Hello!'"
+
+
+def test_local_box_singleton():
+    from codeboxapi.local import LocalBox
+
+    with pytest.raises(RuntimeError) as exc_info:
+        _ = LocalBox()
+
+    assert "Only one LocalBox instance can exist at a time" in str(exc_info.value)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        _ = CodeBox(api_key="local")
+
+    assert "codeboxapi.com" in str(exc_info.value)
 
 
 if __name__ == "__main__":
