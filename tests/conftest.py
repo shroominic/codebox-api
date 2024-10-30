@@ -15,7 +15,10 @@ def codebox(request: pytest.FixtureRequest) -> CodeBox:
     if request.param == "local":
         return LOCALBOX
 
-    if request.param == "docker" and os.system("docker ps > /dev/null 2>&1") != 0:
+    if request.param == "docker" and (
+        os.system("docker ps > /dev/null 2>&1") != 0
+        or os.getenv("GITHUB_ACTIONS") == "true"
+    ):
         pytest.skip("Docker is not running")
 
     return CodeBox(api_key=request.param)
