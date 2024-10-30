@@ -1,7 +1,7 @@
 import os
 import signal
 import typing as t
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from functools import partial, reduce, wraps
 from importlib.metadata import PackageNotFoundError, distribution
 from warnings import warn
@@ -35,7 +35,7 @@ def deprecated(message: str) -> t.Callable[[t.Callable[P, T]], t.Callable[P, T]]
     return decorator
 
 
-def resolve_pathlike(file: str | os.PathLike) -> str:
+def resolve_pathlike(file: t.Union[str, os.PathLike]) -> str:
     if isinstance(file, os.PathLike):
         with open(file, "r") as f:
             return f.read()
@@ -47,7 +47,7 @@ def reduce_bytes(async_gen: t.Iterator[bytes]) -> bytes:
 
 
 def flatten_exec_result(
-    result: "ExecResult" | t.Iterator["ExecChunk"],
+    result: t.Union["ExecResult", t.Iterator["ExecChunk"]],
 ) -> "ExecResult":
     from .types import ExecResult
 
@@ -117,7 +117,23 @@ def check_installed(package: str) -> None:
 
 
 @contextmanager
-def raise_timeout(timeout: float | None = None):
+def raise_timeout(timeout: t.Optional[float] = None):
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Execution timed out")
+
+    if timeout is not None:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(int(timeout))
+
+    try:
+        yield
+    finally:
+        if timeout is not None:
+            signal.alarm(0)
+
+
+@asynccontextmanager
+async def async_raise_timeout(timeout: t.Optional[float] = None):
     def timeout_handler(signum, frame):
         raise TimeoutError("Execution timed out")
 

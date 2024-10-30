@@ -11,7 +11,7 @@ codebox = CodeBox(api_key="local")
 
 # download the iris dataset
 iris_csv_bytes = httpx.get(
-    "https://archive.ics.uci.edu/" "ml/machine-learning-databases/iris/iris.data"
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 ).content
 
 # upload the dataset to the codebox

@@ -1,25 +1,27 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from os import getenv, path
-from typing import AsyncGenerator, Literal
+import typing as t
 
 from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
+from codeboxapi.utils import async_raise_timeout
+
 from .local import LocalBox
 
 codebox = LocalBox()
-last_interaction = datetime.now(UTC)
+last_interaction = datetime.utcnow()
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_: FastAPI) -> t.AsyncGenerator[None, None]:
     async def timeout():
         if (_timeout := getenv("CODEBOX_TIMEOUT", "15")).lower() == "none":
             return
-        while last_interaction + timedelta(minutes=float(_timeout)) > datetime.now(UTC):
+        while last_interaction + timedelta(minutes=float(_timeout)) > datetime.utcnow():
             await asyncio.sleep(1)
         exit(0)
 
@@ -28,9 +30,9 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     t.cancel()
 
 
-async def get_codebox() -> AsyncGenerator[LocalBox, None]:
+async def get_codebox() -> t.AsyncGenerator[LocalBox, None]:
     global codebox, last_interaction
-    last_interaction = datetime.now(UTC)
+    last_interaction = datetime.utcnow()
     yield codebox
 
 
@@ -40,16 +42,16 @@ app.get("/")(lambda: {"status": "ok"})
 
 class ExecBody(BaseModel):
     code: str
-    kernel: Literal["ipython", "bash"] = "ipython"
-    timeout: int | None = None
-    cwd: str | None = None
+    kernel: t.Literal["ipython", "bash"] = "ipython"
+    timeout: t.Optional[int] = None
+    cwd: t.Optional[str] = None
 
 
 @app.post("/exec")
 async def exec(
     exec: ExecBody, codebox: LocalBox = Depends(get_codebox)
 ) -> StreamingResponse:
-    async def event_stream() -> AsyncGenerator[str, None]:
+    async def event_stream() -> t.AsyncGenerator[str, None]:
         async for chunk in codebox.astream_exec(
             exec.code, exec.kernel, exec.timeout, exec.cwd
         ):  # protocol is <type>content</type>
@@ -61,10 +63,10 @@ async def exec(
 @app.get("/files/download/{file_name}")
 async def download(
     file_name: str,
-    timeout: int | None = None,
+    timeout: t.Optional[int] = None,
     codebox: LocalBox = Depends(get_codebox),
 ) -> FileResponse:
-    async with asyncio.timeout(timeout):
+    async with async_raise_timeout(timeout):
         file_path = path.join(codebox.cwd, file_name)
         return FileResponse(
             path=file_path, media_type="application/octet-stream", filename=file_name
@@ -74,13 +76,13 @@ async def download(
 @app.post("/files/upload")
 async def upload(
     file: UploadFile,
-    timeout: int | None = None,
+    timeout: t.Optional[int] = None,
     codebox: LocalBox = Depends(get_codebox),
 ) -> None:
     if not file.filename:
         raise HTTPException(status_code=400, detail="A file name is required")
-    async with asyncio.timeout(timeout):
-        await codebox.aupload(file.filename, file.file)
+
+    await codebox.aupload(file.filename, file.file, timeout)
 
 
 @app.post("/code/execute")

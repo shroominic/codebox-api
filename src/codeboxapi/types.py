@@ -10,8 +10,8 @@ from .codebox import CodeBox
 class RemoteFile:
     path: str
     remote: CodeBox
-    _size: int | None = None
-    _content: bytes | None = None
+    _size: t.Optional[int] = None
+    _content: t.Optional[bytes] = None
 
     @property
     def name(self) -> str:
@@ -110,7 +110,7 @@ class CodeBoxOutput:
 class CodeBoxFile:
     """Deprecated CodeBoxFile class"""
 
-    def __init__(self, name: str, content: bytes | None = None) -> None:
+    def __init__(self, name: str, content: t.Optional[bytes] = None) -> None:
         from .utils import deprecated
 
         deprecated(

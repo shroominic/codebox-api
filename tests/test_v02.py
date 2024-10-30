@@ -18,12 +18,12 @@ def test_sync_codebox_lifecycle(codebox: CodeBox):
     codebox.upload(file_name, file_content)
 
     downloaded_file = codebox.download(file_name)
-    assert isinstance(
-        downloaded_file, RemoteFile
-    ), "Download should return a RemoteFile"
-    assert (
-        downloaded_file.get_content() == file_content
-    ), "Downloaded content should match uploaded content"
+    assert isinstance(downloaded_file, RemoteFile), (
+        "Download should return a RemoteFile"
+    )
+    assert downloaded_file.get_content() == file_content, (
+        "Downloaded content should match uploaded content"
+    )
 
     install_result = codebox.install("matplotlib")
     assert "matplotlib" in install_result, "Matplotlib should be installed successfully"
@@ -42,9 +42,9 @@ def test_sync_codebox_lifecycle(codebox: CodeBox):
         "plt.show()"
     )
     assert plot_result.images, "Plot execution should produce an image"
-    assert (
-        len(plot_result.images) == 1
-    ), "Plot execution should produce exactly one image"
+    assert len(plot_result.images) == 1, (
+        "Plot execution should produce exactly one image"
+    )
 
 
 @pytest.mark.asyncio
@@ -61,12 +61,12 @@ async def test_async_codebox_lifecycle(codebox: CodeBox):
     await codebox.aupload(file_name, file_content)
 
     downloaded_file = await codebox.adownload(file_name)
-    assert isinstance(
-        downloaded_file, RemoteFile
-    ), "Download should return a RemoteFile"
-    assert (
-        downloaded_file.get_content() == file_content
-    ), "Downloaded content should match uploaded content"
+    assert isinstance(downloaded_file, RemoteFile), (
+        "Download should return a RemoteFile"
+    )
+    assert downloaded_file.get_content() == file_content, (
+        "Downloaded content should match uploaded content"
+    )
 
     install_result = await codebox.ainstall("matplotlib")
     assert "matplotlib" in install_result, "Matplotlib should be installed successfully"
@@ -87,9 +87,9 @@ async def test_async_codebox_lifecycle(codebox: CodeBox):
         "plt.show()"
     )
     assert plot_result.images, "Plot execution should produce an image"
-    assert (
-        len(plot_result.images) == 1
-    ), "Plot execution should produce exactly one image"
+    assert len(plot_result.images) == 1, (
+        "Plot execution should produce exactly one image"
+    )
 
 
 def test_sync_list_operations(codebox: CodeBox):
@@ -104,16 +104,16 @@ def test_sync_list_operations(codebox: CodeBox):
 
     files = codebox.list_files()
     assert isinstance(files, list), "list_files should return a list"
-    assert all(
-        isinstance(f, RemoteFile) for f in files
-    ), "All items in list_files should be RemoteFile instances"
+    assert all(isinstance(f, RemoteFile) for f in files), (
+        "All items in list_files should be RemoteFile instances"
+    )
 
     packages = codebox.list_packages()
     assert isinstance(packages, list), "list_packages should return a list"
     assert len(packages) > 0, "There should be at least one package installed"
-    assert any(
-        "matplotlib" in pkg for pkg in packages
-    ), "Matplotlib should be in the list of packages"
+    assert any("matplotlib" in pkg for pkg in packages), (
+        "Matplotlib should be in the list of packages"
+    )
 
 
 @pytest.mark.asyncio
@@ -125,22 +125,22 @@ async def test_async_list_operations(codebox: CodeBox):
     assert "y" in variables.keys(), "Variable 'y' should be listed"
     assert "test" in variables["y"], "Variable 'y' should contain value 'test'"
     assert "z" in variables.keys(), "Variable 'z' should be listed"
-    assert (
-        "[1, 2, 3]" in variables["z"]
-    ), "Variable 'z' should contain value '[1, 2, 3]'"
+    assert "[1, 2, 3]" in variables["z"], (
+        "Variable 'z' should contain value '[1, 2, 3]'"
+    )
 
     files = await codebox.alist_files()
     assert isinstance(files, list), "list_files should return a list"
-    assert all(
-        isinstance(f, RemoteFile) for f in files
-    ), "All items in list_files should be RemoteFile instances"
+    assert all(isinstance(f, RemoteFile) for f in files), (
+        "All items in list_files should be RemoteFile instances"
+    )
 
     packages = await codebox.alist_packages()
     assert isinstance(packages, list), "list_packages should return a list"
     assert len(packages) > 0, "There should be at least one package installed"
-    assert any(
-        "matplotlib" in pkg for pkg in packages
-    ), "Matplotlib should be in the list of packages"
+    assert any("matplotlib" in pkg for pkg in packages), (
+        "Matplotlib should be in the list of packages"
+    )
 
 
 def test_sync_stream_exec(codebox: CodeBox):
@@ -153,21 +153,21 @@ def test_sync_stream_exec(codebox: CodeBox):
         chunks.append((chunk, time.perf_counter() - t0))
 
     assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt'"
+    assert all(isinstance(chunk[0], ExecChunk) for chunk in chunks), (
+        "All items should be ExecChunk instances"
+    )
+    assert all(chunk[0].type == "txt" for chunk in chunks), (
+        "All chunks should be of type 'txt'"
+    )
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
     ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay"
+    assert all(chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)), (
+        "Chunks should arrive with delay"
+    )
     # Verify chunks don't arrive all at once
     assert any(
         chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
@@ -186,21 +186,21 @@ async def test_sync_stream_exec_ipython(codebox: CodeBox):
         chunks.append((chunk, time.perf_counter() - t0))
 
     assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt'"
+    assert all(isinstance(chunk[0], ExecChunk) for chunk in chunks), (
+        "All items should be ExecChunk instances"
+    )
+    assert all(chunk[0].type == "txt" for chunk in chunks), (
+        "All chunks should be of type 'txt'"
+    )
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
     ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay"
+    assert all(chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)), (
+        "Chunks should arrive with delay"
+    )
     # Verify chunks don't arrive all at once
     assert any(
         chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
@@ -218,21 +218,21 @@ async def test_async_stream_exec_ipython(codebox: CodeBox):
         chunks.append((chunk, time.perf_counter() - t0))
 
     assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt'"
+    assert all(isinstance(chunk[0], ExecChunk) for chunk in chunks), (
+        "All items should be ExecChunk instances"
+    )
+    assert all(chunk[0].type == "txt" for chunk in chunks), (
+        "All chunks should be of type 'txt'"
+    )
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
     ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay"
+    assert all(chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)), (
+        "Chunks should arrive with delay"
+    )
     # Verify chunks don't arrive all at once
     assert any(
         chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
@@ -251,21 +251,21 @@ async def test_async_stream_exec_bash(codebox: CodeBox):
         chunks.append((chunk, time.perf_counter() - t0))
 
     assert len(chunks) == 3, "iterating over stream_exec should produce 3 chunks"
-    assert all(
-        isinstance(chunk[0], ExecChunk) for chunk in chunks
-    ), "All items should be ExecChunk instances"
-    assert all(
-        chunk[0].type == "txt" for chunk in chunks
-    ), "All chunks should be of type 'txt'"
+    assert all(isinstance(chunk[0], ExecChunk) for chunk in chunks), (
+        "All items should be ExecChunk instances"
+    )
+    assert all(chunk[0].type == "txt" for chunk in chunks), (
+        "All chunks should be of type 'txt'"
+    )
     assert [chunk[0].content.strip() for chunk in chunks] == [
         "0",
         "1",
         "2",
     ], "Chunks should contain correct content"
     # Verify chunks arrive with delay
-    assert all(
-        chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)
-    ), "Chunks should arrive with delay"
+    assert all(chunks[i][1] < chunks[i + 1][1] for i in range(len(chunks) - 1)), (
+        "Chunks should arrive with delay"
+    )
     # Verify chunks don't arrive all at once
     assert any(
         chunks[i + 1][1] - chunks[i][1] > 0.005 for i in range(len(chunks) - 1)
@@ -276,9 +276,9 @@ def test_sync_error_handling(codebox: CodeBox):
     result = codebox.exec("1/0")
     assert result.errors, "Execution should produce an error"
     error = result.errors[0].lower()
-    assert (
-        "division" in error and "zero" in error
-    ), "Error should be a ZeroDivisionError"
+    assert "division" in error and "zero" in error, (
+        "Error should be a ZeroDivisionError"
+    )
 
 
 @pytest.mark.asyncio
@@ -286,9 +286,9 @@ async def test_async_error_handling(codebox: CodeBox):
     result = await codebox.aexec("1/0")
     assert result.errors, "Execution should produce an error"
     error = result.errors[0].lower()
-    assert (
-        "division" in error and "zero" in error
-    ), "Error should be a ZeroDivisionError"
+    assert "division" in error and "zero" in error, (
+        "Error should be a ZeroDivisionError"
+    )
 
 
 def test_sync_bash_commands(codebox: CodeBox):

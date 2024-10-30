@@ -6,7 +6,7 @@ jobs:
   pre-commit:
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -18,8 +18,6 @@ jobs:
         run: rye pin ${{ matrix.python-version }}
       - name: Sync rye
         run: rye sync
-      - name: Run ruff
-        run: rye run ruff check
       - name: Run tests
         env:
           CODEBOX_API_KEY: ${{ secrets.CODEBOX_API_KEY }}

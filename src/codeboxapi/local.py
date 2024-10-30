@@ -23,7 +23,13 @@ from IPython.core.interactiveshell import ExecutionResult, InteractiveShell
 
 from .codebox import CodeBox
 from .types import ExecChunk, RemoteFile
-from .utils import check_installed, raise_timeout, resolve_pathlike, run_inside
+from .utils import (
+    async_raise_timeout,
+    check_installed,
+    raise_timeout,
+    resolve_pathlike,
+    run_inside,
+)
 
 IMAGE_PATTERN = r"<image>(.*?)</image>"
 
@@ -56,7 +62,7 @@ class LocalBox(CodeBox):
 
     def __init__(
         self,
-        session_id: str | None = None,
+        session_id: t.Optional[str] = None,
         codebox_cwd: str = ".codebox",
         **kwargs,
     ) -> None:
@@ -90,10 +96,10 @@ class LocalBox(CodeBox):
 
     def stream_exec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.Generator[ExecChunk, None, None]:
         with raise_timeout(timeout):
             code = resolve_pathlike(code)
@@ -105,7 +111,7 @@ class LocalBox(CodeBox):
                         io.StringIO(),
                         io.StringIO(),
                     )
-                    queue = Queue[ExecChunk | None]()
+                    queue: Queue[t.Optional[ExecChunk]] = Queue()
                     _result: list[ExecutionResult] = []
 
                     def _run_cell(c: str, result: list[ExecutionResult]) -> None:
@@ -204,12 +210,12 @@ class LocalBox(CodeBox):
 
     async def astream_exec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.AsyncGenerator[ExecChunk, None]:
-        async with asyncio.timeout(timeout):
+        async with async_raise_timeout(timeout):
             code = resolve_pathlike(code)
 
             if kernel == "ipython":
@@ -286,8 +292,8 @@ class LocalBox(CodeBox):
     def upload(
         self,
         remote_file_path: str,
-        content: t.BinaryIO | bytes | str,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str],
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         from .types import RemoteFile
 
@@ -309,14 +315,14 @@ class LocalBox(CodeBox):
     async def aupload(
         self,
         file_name: str,
-        content: t.BinaryIO | bytes | str | tmpf.SpooledTemporaryFile,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str, tmpf.SpooledTemporaryFile],
+        timeout: t.Optional[float] = None,
     ) -> RemoteFile:
         import aiofiles.os
 
         from .types import RemoteFile
 
-        async with asyncio.timeout(timeout):
+        async with async_raise_timeout(timeout):
             file_path = os.path.join(self.cwd, file_name)
             async with aiofiles.open(file_path, "wb") as file:
                 if isinstance(content, str):
@@ -346,7 +352,7 @@ class LocalBox(CodeBox):
     def stream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.Generator[bytes, None, None]:
         with raise_timeout(timeout):
             with open(os.path.join(self.cwd, remote_file_path), "rb") as f:
@@ -356,11 +362,11 @@ class LocalBox(CodeBox):
     async def astream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.AsyncGenerator[bytes, None]:
         import aiofiles
 
-        async with asyncio.timeout(timeout):
+        async with async_raise_timeout(timeout):
             async with aiofiles.open(
                 os.path.join(self.cwd, remote_file_path), "rb"
             ) as f:

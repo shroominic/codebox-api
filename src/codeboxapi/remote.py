@@ -22,10 +22,10 @@ class RemoteBox(CodeBox):
 
     def __init__(
         self,
-        session_id: str | None = None,
-        api_key: str | t.Literal["local", "docker"] | None = None,
-        factory_id: str | t.Literal["default"] | None = None,
-        base_url: str | None = None,
+        session_id: t.Optional[str] = None,
+        api_key: t.Optional[t.Union[str, t.Literal["local", "docker"]]] = None,
+        factory_id: t.Optional[t.Union[str, t.Literal["default"]]] = None,
+        base_url: t.Optional[str] = None,
     ) -> None:
         self.session_id = session_id or uuid4().hex
         self.factory_id = factory_id or getenv("CODEBOX_FACTORY_ID", "default")
@@ -48,10 +48,10 @@ class RemoteBox(CodeBox):
 
     def stream_exec(
         self,
-        code: str | PathLike,
+        code: t.Union[str, PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.Generator[ExecChunk, None, None]:
         code = resolve_pathlike(code)
         with self.client.stream(
@@ -74,10 +74,10 @@ class RemoteBox(CodeBox):
 
     async def astream_exec(
         self,
-        code: str | PathLike,
+        code: t.Union[str, PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.AsyncGenerator[ExecChunk, None]:
         code = resolve_pathlike(code)
         try:
@@ -108,8 +108,8 @@ class RemoteBox(CodeBox):
     def upload(
         self,
         file_name: str,
-        content: t.BinaryIO | bytes | str,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str],
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         from .types import RemoteFile
 
@@ -125,8 +125,8 @@ class RemoteBox(CodeBox):
     async def aupload(
         self,
         remote_file_path: str,
-        content: t.BinaryIO | bytes | str,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str],
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         from .types import RemoteFile
 
@@ -143,7 +143,7 @@ class RemoteBox(CodeBox):
     def stream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.Generator[bytes, None, None]:
         with self.client.stream(
             method="GET",
@@ -156,7 +156,7 @@ class RemoteBox(CodeBox):
     async def astream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.AsyncGenerator[bytes, None]:
         async with self.aclient.stream(
             method="GET",

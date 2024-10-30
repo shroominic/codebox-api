@@ -50,9 +50,9 @@ if t.TYPE_CHECKING:
 class CodeBox:
     def __new__(
         cls,
-        session_id: str | None = None,
-        api_key: str | t.Literal["local", "docker"] | None = None,
-        factory_id: str | t.Literal["default"] | None = None,
+        session_id: t.Optional[str] = None,
+        api_key: t.Optional[t.Union[str, t.Literal["local", "docker"]]] = None,
+        factory_id: t.Optional[t.Union[str, t.Literal["default"]]] = None,
     ) -> "CodeBox":
         """
         Creates a CodeBox session
@@ -68,9 +68,9 @@ class CodeBox:
 
     def __init__(
         self,
-        session_id: str | None = None,
-        api_key: str | t.Literal["local", "docker"] | None = None,
-        factory_id: str | t.Literal["default"] | None = None,
+        session_id: t.Optional[str] = None,
+        api_key: t.Optional[t.Union[str, t.Literal["local", "docker"]]] = None,
+        factory_id: t.Optional[t.Union[str, t.Literal["default"]]] = None,
         **_: bool,
     ) -> None:
         self.session_id = session_id or "local"
@@ -81,20 +81,20 @@ class CodeBox:
 
     def exec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> "ExecResult":
         """Execute code inside the CodeBox instance"""
         return flatten_exec_result(self.stream_exec(code, kernel, timeout, cwd))
 
     def stream_exec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.Generator["ExecChunk", None, None]:
         """Executes the code and streams the result."""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -102,8 +102,8 @@ class CodeBox:
     def upload(
         self,
         remote_file_path: str,
-        content: t.BinaryIO | bytes | str,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str],
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         """Upload a file to the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -111,7 +111,7 @@ class CodeBox:
     def stream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.Generator[bytes, None, None]:
         """Download a file as open BinaryIO. Make sure to close the file after use."""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -120,10 +120,10 @@ class CodeBox:
 
     async def aexec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> "ExecResult":
         """Async Execute python code inside the CodeBox instance"""
         return await async_flatten_exec_result(
@@ -132,10 +132,10 @@ class CodeBox:
 
     def astream_exec(
         self,
-        code: str | os.PathLike,
+        code: t.Union[str, os.PathLike],
         kernel: t.Literal["ipython", "bash"] = "ipython",
-        timeout: float | None = None,
-        cwd: str | None = None,
+        timeout: t.Optional[float] = None,
+        cwd: t.Optional[str] = None,
     ) -> t.AsyncGenerator["ExecChunk", None]:
         """Async Stream Chunks of Execute python code inside the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -143,8 +143,8 @@ class CodeBox:
     async def aupload(
         self,
         remote_file_path: str,
-        content: t.BinaryIO | bytes | str,
-        timeout: float | None = None,
+        content: t.Union[t.BinaryIO, bytes, str],
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         """Async Upload a file to the CodeBox instance"""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -152,14 +152,14 @@ class CodeBox:
     async def adownload(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> "RemoteFile":
         return [f for f in (await self.alist_files()) if f.path in remote_file_path][0]
 
     def astream_download(
         self,
         remote_file_path: str,
-        timeout: float | None = None,
+        timeout: t.Optional[float] = None,
     ) -> t.AsyncGenerator[bytes, None]:
         """Async Download a file as BinaryIO. Make sure to close the file after use."""
         raise NotImplementedError("Abstract method, please use a subclass.")
@@ -242,7 +242,7 @@ class CodeBox:
     # SYNCIFY
 
     def download(
-        self, remote_file_path: str, timeout: float | None = None
+        self, remote_file_path: str, timeout: t.Optional[float] = None
     ) -> "RemoteFile":
         return syncify(self.adownload)(remote_file_path, timeout)
 
@@ -288,7 +288,7 @@ class CodeBox:
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    async def arun(self, code: str | os.PathLike) -> "CodeBoxOutput":
+    async def arun(self, code: t.Union[str, os.PathLike]) -> "CodeBoxOutput":
         from .types import CodeBoxOutput
 
         exec_result = await self.aexec(code, kernel="ipython")
@@ -321,7 +321,7 @@ class CodeBox:
     @deprecated(
         "The `.run` method is deprecated. Use `.exec` instead.",
     )
-    def run(self, code: str | os.PathLike) -> "CodeBoxOutput":
+    def run(self, code: t.Union[str, os.PathLike]) -> "CodeBoxOutput":
         return syncify(self.arun)(code)
 
     @deprecated(

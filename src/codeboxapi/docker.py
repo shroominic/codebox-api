@@ -1,13 +1,14 @@
 import socket
 import subprocess
 import time
+import typing as t
 
 import httpx
 
 from .remote import RemoteBox
 
 
-def get_free_port(port_or_range: int | tuple[int, int]) -> int:
+def get_free_port(port_or_range: t.Union[int, t.Tuple[int, int]]) -> int:
     if isinstance(port_or_range, int):
         port = port_or_range
     else:
@@ -29,7 +30,7 @@ def get_free_port(port_or_range: int | tuple[int, int]) -> int:
 class DockerBox(RemoteBox):
     def __init__(
         self,
-        port_or_range: int | tuple[int, int] = 8069,
+        port_or_range: t.Union[int, t.Tuple[int, int]] = 8069,
         image: str = "shroominic/codebox:latest",
         timeout: float = 3,  # minutes
         start_container: bool = True,
