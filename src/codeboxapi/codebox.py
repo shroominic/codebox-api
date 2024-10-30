@@ -60,12 +60,11 @@ class CodeBox:
         api_key = api_key or os.getenv("CODEBOX_API_KEY", "local")
         factory_id = factory_id or os.getenv("CODEBOX_FACTORY_ID", "default")
         if api_key == "local":
-            return super().__new__(import_module("codeboxapi.local").LocalBox)
+            return import_module("codeboxapi.local").LocalBox()
 
         if api_key == "docker":
-            return super().__new__(import_module("codeboxapi.docker").DockerBox)
-
-        return super().__new__(import_module("codeboxapi.remote").RemoteBox)
+            return import_module("codeboxapi.docker").DockerBox()
+        return import_module("codeboxapi.remote").RemoteBox()
 
     def __init__(
         self,
