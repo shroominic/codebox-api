@@ -20,26 +20,25 @@ pip install codeboxapi
 ## Usage
 
 ```bash
-export CODEBOX_API_KEY=sk-***************
+export CODEBOX_API_KEY=local # for local development
+export CODEBOX_API_KEY=docker # for small projects
+export CODEBOX_API_KEY=sk-*************** # for production
 ```
 
 ```python
 from codeboxapi import CodeBox
 
-# startup and automatically shutdown a new codebox
-with CodeBox() as codebox:
-    # check if it's running
-    print(codebox.status())
+# create a new codebox
+codebox = CodeBox()
 
-    # run some code
-    codebox.run("a = 'Hello'")
-    codebox.run("b = 'World!'")
-    codebox.run("result = a + ', ' + b")
-    result = codebox.run("print(result)")
+# run some code
+codebox.exec("a = 'Hello'")
+codebox.exec("b = 'World!'")
+codebox.exec("x = a + ', ' + b")
+result = codebox.exec("print(x)")
 
-    print(result)
-    # Hello, World!
-
+print(result)
+# Hello, World!
 ```
 
 ## Where to get your api-key?
