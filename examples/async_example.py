@@ -28,7 +28,8 @@ async def async_examples():
 
     # 5. Async Streaming Download
     async for chunk in codebox.astream_download("async_file.txt"):
-        print(chunk.content)
+        assert isinstance(chunk, bytes)
+        print(chunk.decode())
 
 
 if __name__ == "__main__":
