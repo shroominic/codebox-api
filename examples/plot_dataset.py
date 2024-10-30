@@ -12,10 +12,10 @@ csv_bytes = httpx.get(
 ).content
 
 # upload the dataset to the codebox
-o = codebox.upload("iris.csv", csv_bytes)
+codebox.upload("iris.csv", csv_bytes)
 
 # dataset analysis code
-file_path = Path("../../examples/assets/dataset_code.txt")
+file_path = Path("examples/assets/dataset_code.txt")
 
 # run the code
 output = codebox.run(code=file_path)
