@@ -5,6 +5,12 @@ from uuid import uuid4
 
 import anyio
 import httpx
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from .codebox import CodeBox
 from .types import ExecChunk, RemoteFile
@@ -46,6 +52,14 @@ class RemoteBox(CodeBox):
         self.client = httpx.Client(base_url=self.url, headers=self.headers)
         self.aclient = httpx.AsyncClient(base_url=self.url, headers=self.headers)
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     def stream_exec(
         self,
         code: t.Union[str, PathLike],
@@ -72,6 +86,14 @@ class RemoteBox(CodeBox):
                     yield ExecChunk(type=t, content=c)  # type: ignore[arg-type]
                     buffer = buffer[end:]
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     async def astream_exec(
         self,
         code: t.Union[str, PathLike],
@@ -105,6 +127,14 @@ class RemoteBox(CodeBox):
             async for c in self.astream_exec(code, kernel, timeout, cwd):
                 yield c
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     def upload(
         self,
         file_name: str,
@@ -122,6 +152,14 @@ class RemoteBox(CodeBox):
         ).raise_for_status()
         return RemoteFile(path=file_name, remote=self)
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     async def aupload(
         self,
         remote_file_path: str,
@@ -140,6 +178,14 @@ class RemoteBox(CodeBox):
         response.raise_for_status()
         return RemoteFile(path=remote_file_path, remote=self)
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     def stream_download(
         self,
         remote_file_path: str,
@@ -150,9 +196,18 @@ class RemoteBox(CodeBox):
             url=f"/files/download/{remote_file_path}",
             timeout=timeout,
         ) as response:
+            response.raise_for_status()
             for chunk in response.iter_bytes():
                 yield chunk
 
+    @retry(
+        retry=retry_if_exception(
+            lambda e: isinstance(e, httpx.HTTPStatusError)
+            and e.response.status_code == 502
+        ),
+        wait=wait_exponential(multiplier=1, min=5, max=150),
+        stop=stop_after_attempt(3),
+    )
     async def astream_download(
         self,
         remote_file_path: str,
@@ -163,5 +218,6 @@ class RemoteBox(CodeBox):
             url=f"/files/download/{remote_file_path}",
             timeout=timeout,
         ) as response:
+            response.raise_for_status()
             async for chunk in response.aiter_bytes():
                 yield chunk
