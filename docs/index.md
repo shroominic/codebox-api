@@ -1,4 +1,3 @@
-
 # 📦 CodeBox API
 
 [![Version](https://badge.fury.io/py/codeboxapi.svg)](https://badge.fury.io/py/codeboxapi)
@@ -7,34 +6,49 @@
 ![License](https://img.shields.io/pypi/l/codeboxapi)
 ![PyVersion](https://img.shields.io/pypi/pyversions/codeboxapi)
 
-CodeBox is the simplest cloud infrastructure for running and testing python code in an isolated environment. It allows developers to execute arbitrary python code without worrying about security or dependencies. Some key features include:
+## What is CodeBox?
 
-- Securely execute python code in a sandboxed container
-- Easily install python packages into the environment
-- Built-in file storage for uploading and downloading files
-- Support for running code asynchronously using asyncio
-- Local testing mode for development without an internet connection
+CodeBox is a cloud infrastructure designed to run and test Python code in an isolated environment. It allows developers to execute arbitrary Python code without worrying about security or dependencies.
 
-## Why is SandBoxing important?
+### Key Features
 
-When deploying LLM Agents to production, it is important to ensure
-that the code they run is safe and does not contain any malicious code.
-This is especially important when considering prompt injection, which
-could give an attacker access to the entire system.
+- 🧪 **Open Source**: Development without internet connection or API key
+- 🔒 **Secure Execution**: Code runs in isolated environments
+- 🚀 **Easy Scaling**: Scales with your workload
+- ⏩️ **Streaming**: Code execution can be streamed
+- 💾 **File System**: Upload/download of files
+- ⚡ **Async Support**: All interfaces support async
+- 🐳 **Docker**: Fully local parallel execution
+- 🏭 **Factories**: Create fully custom environments
 
-## How does CodeBox work?
+## Quick Start
 
-CodeBox uses a cloud hosted system to run hardened containers
-that are designed to be secure. These containers are then used to
-run the code that is sent to the API. This ensures that the code
-is run in a secure environment, and that the code cannot access
-the host system.
+```python
+from codeboxapi import CodeBox
+codebox = CodeBox()
+# Execute Python code
+result = codebox.exec("print('Hello World!')")
+print(result.text)
+# Install packages
+codebox.install("pandas", "numpy")
+# Handle files
+codebox.upload("data.csv", "1,2,3\n4,5,6")
+files = codebox.list_files()
+```
 
-## Links & Resources
+## Use Cases
 
-- [CodeInterpreterAPI](https://github.com/shroominic/codeinterpreter-api)
-- [Documentation](https://shroominic.github.io/codebox-api/)
-- [REST API](https://codeboxapi.com/docs)
-- [Get API Key](https://pay.codeboxapi.com/b/00g3e6dZX2fTg0gaEE)
-- [Github Repo](https://github.com/shroominic/codebox-api)
-- [PyPI Package](https://pypi.org/project/codeboxapi/)
+- 🤖 **Code Interpreter**: Safe execution of AI-generated code
+- 📚 **SWE Agents**: Parallel & secure dev environments
+- 🧪 **Testing**: Isolated testing environment
+- 🔬 **Security Research**: Safe code execution for analysis
+- 🛠️ **Automation**: Automated workflows
+
+## Resources
+
+- 🌐 **CodeBox API**: [codeboxapi.com](https://codeboxapi.com/)
+- 📘 **Complete Documentation**: [shroominic.github.io/codebox-api/](https://shroominic.github.io/codebox-api/)
+- 🔑 **Get API Key**: [codeboxapi.com/pricing](https://codeboxapi.com/pricing)
+- 👾 **Code Interpreter API**: [codeinterpreterapi.com](https://codeinterpreterapi.com)
+- 💻 **GitHub Repository**: [github.com/shroominic/codebox-api](https://github.com/shroominic/codebox-api)
+- 📦 **PyPI Package**: [pypi.org/project/codeboxapi/](https://pypi.org/project/codeboxapi/)

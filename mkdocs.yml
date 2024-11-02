@@ -1,23 +1,58 @@
-site_name: CodeBox API - Docs
+site_name: CodeBox API Documentation
+site_description: Secure Python Code Execution in Isolated Environments
 site_author: Shroominic
 site_url: https://shroominic.github.io/codebox-api/
 repo_name: shroominic/codebox-api
 repo_url: https://github.com/shroominic/codebox-api/
 
-nav:
-  - 'Getting Started':
-    - 'Welcome': 'index.md'
-    - 'Installation': 'installation.md'
-    - 'Usage': 'usage.md'
-    - 'Settings': 'settings.md'
-  - 'Concepts': 'concepts.md'
-  - 'Examples': 'examples.md'
-  - 'API Reference': 'api.md'
-
 theme:
   name: material
   palette:
     scheme: slate
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Introduction:
+    - Overview: index.md
+    - Quick Start: quickstart.md
+  - API Reference:
+    - Settings: api/settings.md
+    - CodeBox Class: api/codebox.md
+    - Exceptions: api/exceptions.md
+  - Core Concepts:
+    - Architecture: concepts/architecture.md
+    - Base Components: concepts/components.md
+  - User Guide:
+    - Basic Usage: guides/basic.md
+    - File Operations: guides/files.md
+    - Package Management: guides/packages.md
+  
+  - Examples:
+    - Basic Examples: examples/basic.md
+    - File Handling: examples/files.md
+    - Async Examples: examples/async.md
+    - Advanced Usage: examples/advanced.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - footnotes
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
 
 plugins:
-  - neoteroi.mkdocsoad
+  - search
