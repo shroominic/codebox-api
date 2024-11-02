@@ -7,31 +7,31 @@ CodeBox provides simple package management capabilities through the `install` me
 ```python
 from codeboxapi import CodeBox
 
-with CodeBox() as codebox:
-    # Install a single package
-    codebox.install("pandas")
-    
-    # Install multiple packages
-    codebox.install("numpy", "matplotlib")
-    
-    # Install specific versions
-    codebox.install("requests==2.28.1")
+codebox = CodeBox()
+# Install a single package
+codebox.install("pandas")
+
+# Install multiple packages
+codebox.install("numpy", "matplotlib")
+
+# Install specific versions
+codebox.install("requests==2.28.1")
 ```
 
 ## Async Installation
 
 ```python
-async with CodeBox() as codebox:
-    await codebox.ainstall("pandas", "numpy")
+codebox = CodeBox()
+await codebox.ainstall("pandas", "numpy")
 ```
 
 ## Verifying Installations
 
 ```python
-with CodeBox() as codebox:
-    codebox.install("pandas")
-    result = codebox.exec("import pandas as pd; print(pd.__version__)")
-    print(result.text)
+codebox = CodeBox()
+codebox.install("pandas")
+result = codebox.exec("import pandas as pd; print(pd.__version__)")
+print(result.text)
 ```
 
 ## Error handling during installation

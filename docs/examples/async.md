@@ -9,19 +9,19 @@ import asyncio
 from codeboxapi import CodeBox
 
 async def process_codebox(id: int):
-    async with CodeBox() as codebox:
-        # Execute code
-        result = await codebox.aexec(f"print('CodeBox {id}')")
-        print(result.text)
-        
-        # Install package
-        await codebox.ainstall("pandas")
-        
-        # Run computation
-        result = await codebox.aexec(
-            "import pandas as pd; print(pd.__version__)"
-        )
-        return result.text
+    codebox = CodeBox()
+    # Execute code
+    result = await codebox.aexec(f"print('CodeBox {id}')")
+    print(result.text)
+    
+    # Install package
+    await codebox.ainstall("pandas")
+    
+    # Run computation
+    result = await codebox.aexec(
+        "import pandas as pd; print(pd.__version__)"
+    )
+    return result.text
 
 async def main():
     # Run 5 CodeBoxes in parallel
@@ -49,9 +49,9 @@ async def upload_with_progress(codebox, filename: str):
     return file
 
 async def main():
-    async with CodeBox() as codebox:
-        file = await upload_with_progress(codebox, "large_file.dat")
-        print(f"Uploaded: {file.path}, Size: {await file.aget_size()}")
+    codebox = CodeBox()
+    file = await upload_with_progress(codebox, "large_file.dat")
+    print(f"Uploaded: {file.path}, Size: {await file.aget_size()}")
 
 asyncio.run(main())
 ```

@@ -3,10 +3,11 @@
 ## Implementation Overview
 
 ### LocalBox
+
 - **Usage**: Local development and testing
 - **Requirements**: jupyter-kernel-gateway, ipython
 - **Configuration**: `api_key="local"`
-- **Advantages**: 
+- **Advantages**:
   - Rapid development
   - No external dependencies
   - Direct local environment access
@@ -17,6 +18,7 @@
   - Local system resources
 
 ### DockerBox
+
 - **Usage**: Isolated testing
 - **Requirements**: Docker installation
 - **Configuration**: `api_key="docker"`
@@ -31,14 +33,17 @@
   - Additional setup needed
 
 ### RemoteBox
+
 - **Usage**: Production, scaling and cloud deployment
-- **Requirements**: 
+- **Requirements**:
   - Valid API key
   - Internet connection
 - **Configuration**:
+
 ```python
-codebox = CodeBox(api_key="your-api-key")
+codebox = CodeBox(api_key="...")
 ```
+
 - **Key Features**:
   - REST API integration
   - Automatic session management

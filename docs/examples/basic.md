@@ -1,26 +1,22 @@
-## Basic Usage
+# Basic Usage
 
 Run code in a new CodeBox:
 
 ```python
 from codeboxapi import CodeBox
 
-with CodeBox() as codebox:
-  print(codebox.status())
+codebox = CodeBox()
 
-  codebox.run("print('Hello World!')")
+codebox.exec("print('Hello World!')")
 ```
 
 Run async code:
 
 ```python
-import asyncio
 from codeboxapi import CodeBox
 
-async def main():
-  async with CodeBox() as codebox:
-    await codebox.astatus()
-    await codebox.arun("print('Hello World!')")
+codebox = CodeBox()
 
-asyncio.run(main())
+async def main():
+  await codebox.aexec("print('Hello World!')")
 ```

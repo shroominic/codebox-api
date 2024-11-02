@@ -7,10 +7,10 @@ You can then start a CodeBox session:
 ```python
 from codeboxapi import CodeBox
 
-with CodeBox() as codebox:
-    print(codebox.healthcheck())
-    result = codebox.exec("print('Hello World!')")
-    print(result.text)
+codebox = CodeBox()
+print(codebox.healthcheck())
+result = codebox.exec("print('Hello World!')")
+print(result.text)
 ```
 
 The context manager (`with * as *:`) will automatically start and shutdown the CodeBox.
@@ -21,8 +21,8 @@ You can also use CodeBox asynchronously:
 from codeboxapi import CodeBox
 
 async def main():
-    async with CodeBox() as codebox:
-        await codebox.ahealthcheck()
-        result = await codebox.aexec("print('Hello World!')")
-        print(result.text)
+    codebox = CodeBox()
+    await codebox.ahealthcheck()
+    result = await codebox.aexec("print('Hello World!')")
+    print(result.text)
 ```
