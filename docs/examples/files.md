@@ -1,57 +1,79 @@
 # File Operations Examples
 
-## Basic File Operations
+For detailed information about file operations, see:
 
+- [RemoteFile Class](../api/types.md#remotefile-class)
+- [File Operations Guide](../guides/files.md)
+
+## Basic File Operations
 ```python
 from codeboxapi import CodeBox
 
 codebox = CodeBox()
 
 # Upload text file
-file = codebox.upload("data.txt", "Hello World!")
-print(f"File size: {file.get_size()} bytes")
+codebox.upload("example.txt", b"Hello from CodeBox!")
 
-# Upload binary data
-binary_data = b"Binary content"
-file = codebox.upload("data.bin", binary_data)
+# Download a file
+downloaded = codebox.download("example.txt")
+content = downloaded.get_content()
+print("Content:", content)
 
-# List all files
-for file in codebox.list_files():
-    print(f"- {file.path}: {file.get_size()} bytes")
-    
-# Download and save locally
-remote_file = codebox.download("data.txt")
-remote_file.save("local_data.txt")
+# List files
+files = codebox.list_files()
+print("\nFiles:", "\n".join(f.__repr__() for f in files))
 ```
+Reference: `getting_started.py` lines 13-24
 
-## Streaming Operations
-
+## URL Downloads
 ```python
 from codeboxapi import CodeBox
-import aiofiles
 
-# Synchronous streaming
-codebox = CodeBox()
-# Stream upload
-with open("large_file.dat", "rb") as f:
-    codebox.upload("remote_file.dat", f.read())
+def url_upload(codebox: CodeBox, url: str) -> None:
+    codebox.exec("""
+import requests
+import os
 
-# Stream download with progress
-from tqdm import tqdm
-total_size = file.get_size()
-with tqdm(total=total_size) as pbar:
-    with open("downloaded.dat", "wb") as f:
-        for chunk in codebox.stream_download("remote_file.dat"):
-            f.write(chunk)
-                pbar.update(len(chunk))
-
-# Asynchronous streaming
-async def stream_example():
-    codebox = CodeBox()
-
-    async with aiofiles.open("large_file.dat", "rb") as f:
-        file = await codebox.aupload("remote_file.dat", f)
-        
-    async for chunk in codebox.astream_download("remote_file.dat"):
-        await process_chunk(chunk)
+def download_file_from_url(url: str) -> None:
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    file_name = url.split('/')[-1]
+    file_path = './' + file_name
+    with open(file_path, 'wb') as file:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                file.write(chunk)
+    """)
+    codebox.exec(f"download_file_from_url('{url}')")
 ```
+Reference: `big_upload_from_url.py` lines 4-19
+
+## File Conversions
+```python
+from codeboxapi import CodeBox
+
+codebox = CodeBox()
+
+# Upload dataset csv
+csv_bytes = httpx.get(
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+).content
+codebox.upload("iris.csv", csv_bytes)
+
+# Install required packages
+codebox.install("pandas")
+codebox.install("openpyxl")
+
+# Convert dataset csv to excel
+output = codebox.exec(
+    "import pandas as pd\n\n"
+    "df = pd.read_csv('iris.csv', header=None)\n\n"
+    "df.to_excel('iris.xlsx', index=False)\n"
+)
+```
+Reference: `file_conversion.py` lines 7-23
+
+For more details on file handling, see:
+
+- [Data Structures](../concepts/data_structures.md#remotefile)
+- [API Methods](../api/codebox.md#file-operations)

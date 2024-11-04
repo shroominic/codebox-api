@@ -1,4 +1,13 @@
+"""
+This script demonstrates parallel model training using multiple Docker instances.
+Requirements:
+- Docker must be running
+- Port 8069 must be available
+- Dataset 'advertising.csv' must exist in examples/assets/
+"""
+
 import asyncio
+import subprocess
 import time
 from pathlib import Path
 
@@ -54,30 +63,44 @@ print(f"Coefficients: {{model.coef_.tolist()}}")
 
 
 async def main():
-    # Create multiple Docker instances
-    num_parallel = 4
-    codeboxes = [CodeBox(api_key="docker") for _ in range(num_parallel)]
+    try:
+        # Create multiple Docker instances
+        num_parallel = 4
+        codeboxes = [CodeBox(api_key="docker") for _ in range(num_parallel)]
 
-    # Create tasks for different data splits
-    tasks = []
-    for i, codebox in enumerate(codeboxes):
-        task = asyncio.create_task(train_model(codebox, i))
-        tasks.append(task)
+        # Create tasks for different data splits
+        tasks = []
+        for i, codebox in enumerate(codeboxes):
+            task = asyncio.create_task(train_model(codebox, i))
+            tasks.append(task)
 
-    # Execute and time the parallel processing
-    start_time = time.perf_counter()
-    results = await asyncio.gather(*tasks)
-    end_time = time.perf_counter()
+        # Execute and time the parallel processing
+        start_time = time.perf_counter()
+        results = await asyncio.gather(*tasks)
+        end_time = time.perf_counter()
 
-    # Print results
-    print(f"\nParallel execution completed in {end_time - start_time:.2f} seconds\n")
-    for result in results:
-        if not result["errors"]:
-            print(f"Results for {result['split']}:")
-            print(result["output"])
-            print("-" * 50)
+        # Print results
+        print(
+            f"\nParallel execution completed in {end_time - start_time:.2f} seconds\n"
+        )
+        for result in results:
+            if not result["errors"]:
+                print(f"Results for {result['split']}:")
+                print(result["output"])
+                print("-" * 50)
+            else:
+                print(f"Error in split {result['split']}:", result["errors"])
+
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 125:
+            print("\nError: Docker is not running. Please start Docker and try again.")
+            print(
+                "You can verify Docker status by running 'docker ps' in your terminal."
+            )
         else:
-            print(f"Error in split {result['split']}:", result["errors"])
+            print(f"\nError executing Docker command: {e}")
+    except Exception as e:
+        print(f"\nUnexpected error: {e}")
 
 
 if __name__ == "__main__":
