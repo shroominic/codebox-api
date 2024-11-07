@@ -1,8 +1,6 @@
 import typing as t
 from dataclasses import dataclass
 
-import aiofiles
-
 from .codebox import CodeBox
 
 
@@ -45,6 +43,14 @@ class RemoteFile:
                 f.write(chunk)
 
     async def asave(self, local_path: str) -> None:
+        try:
+            import aiofiles  # type: ignore
+        except ImportError:
+            raise RuntimeError(
+                "aiofiles is not installed. Please install it with "
+                '`pip install "codeboxapi[local]"`'
+            )
+
         async with aiofiles.open(local_path, "wb") as f:
             async for chunk in self.remote.astream_download(self.path):
                 await f.write(chunk)
