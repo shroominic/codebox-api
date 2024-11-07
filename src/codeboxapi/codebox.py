@@ -48,23 +48,17 @@ if t.TYPE_CHECKING:
 
 
 class CodeBox:
-    def __new__(
-        cls,
-        session_id: t.Optional[str] = None,
-        api_key: t.Optional[t.Union[str, t.Literal["local", "docker"]]] = None,
-        factory_id: t.Optional[t.Union[str, t.Literal["default"]]] = None,
-    ) -> "CodeBox":
+    def __new__(cls, *args, **kwargs) -> "CodeBox":
         """
         Creates a CodeBox session
         """
-        api_key = api_key or os.getenv("CODEBOX_API_KEY", "local")
-        factory_id = factory_id or os.getenv("CODEBOX_FACTORY_ID", "default")
+        api_key = kwargs.get("api_key") or os.getenv("CODEBOX_API_KEY", "local")
         if api_key == "local":
-            return import_module("codeboxapi.local").LocalBox()
+            return import_module("codeboxapi.local").LocalBox(*args, **kwargs)
 
         if api_key == "docker":
-            return import_module("codeboxapi.docker").DockerBox()
-        return import_module("codeboxapi.remote").RemoteBox()
+            return import_module("codeboxapi.docker").DockerBox(*args, **kwargs)
+        return import_module("codeboxapi.remote").RemoteBox(*args, **kwargs)
 
     def __init__(
         self,
