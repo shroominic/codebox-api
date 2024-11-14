@@ -1,57 +1,144 @@
-# File Operations Examples
+# File Operations
+
+For detailed information about file operations, see:
+
+- [RemoteFile Class](../api/types.md#remotefile-class)
+- [File Operations Guide](../guides/files.md)
+
+> [!NOTE] Update **main.py** with each example and run it with
+>```bash
+>python main.py
+>```
 
 ## Basic File Operations
 
 ```python
 from codeboxapi import CodeBox
 
-codebox = CodeBox()
+def main():
+    codebox = CodeBox()
 
-# Upload text file
-file = codebox.upload("data.txt", "Hello World!")
-print(f"File size: {file.get_size()} bytes")
+    # Upload text file
+    codebox.upload("example.txt", b"Hello from CodeBox!")
 
-# Upload binary data
-binary_data = b"Binary content"
-file = codebox.upload("data.bin", binary_data)
+    # Download a file
+    downloaded = codebox.download("example.txt")
+    content = downloaded.get_content()
+    print("Content:", content)
 
-# List all files
-for file in codebox.list_files():
-    print(f"- {file.path}: {file.get_size()} bytes")
-    
-# Download and save locally
-remote_file = codebox.download("data.txt")
-remote_file.save("local_data.txt")
+    # List files
+    files = codebox.list_files()
+    print("\nFiles:", "\n".join(f.__repr__() for f in files))
+
+if __name__ == "__main__":
+    main()
 ```
 
-## Streaming Operations
+### Result:
+```bash
+Content: Hello from CodeBox!
+
+Files:
+RemoteFile(name='example.txt', size=20)
+```
+
+## URL Downloads
 
 ```python
 from codeboxapi import CodeBox
-import aiofiles
 
-# Synchronous streaming
-codebox = CodeBox()
-# Stream upload
-with open("large_file.dat", "rb") as f:
-    codebox.upload("remote_file.dat", f.read())
+def main():
+    codebox = CodeBox()
+    
+    def url_upload(url: str) -> None:
+        codebox.exec("""
+        import requests
+        import os
 
-# Stream download with progress
-from tqdm import tqdm
-total_size = file.get_size()
-with tqdm(total=total_size) as pbar:
-    with open("downloaded.dat", "wb") as f:
-        for chunk in codebox.stream_download("remote_file.dat"):
-            f.write(chunk)
-                pbar.update(len(chunk))
+        def download_file_from_url(url: str) -> None:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            file_name = url.split('/')[-1]
+            file_path = './' + file_name
+            with open(file_path, 'wb') as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        file.write(chunk)
+        """)
+        codebox.exec(f"download_file_from_url('{url}')")
 
-# Asynchronous streaming
-async def stream_example():
+    # Usage example
+    url = "https://example.com/file.txt"
+    url_upload(url)
+    print("File uploaded successfully")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Result:
+```bash
+File uploaded successfully
+```
+
+## File Conversions
+
+```python
+from codeboxapi import CodeBox
+import httpx
+
+def main():
     codebox = CodeBox()
 
-    async with aiofiles.open("large_file.dat", "rb") as f:
-        file = await codebox.aupload("remote_file.dat", f)
-        
-    async for chunk in codebox.astream_download("remote_file.dat"):
-        await process_chunk(chunk)
+    # Upload csv dataset
+    csv_bytes = httpx.get(
+        "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+    ).content
+    codebox.upload("iris.csv", csv_bytes)
+
+    # Install required packages and verify installation
+    codebox.exec("""
+    try:
+        import pandas
+        import openpyxl
+        print("Required packages already installed")
+    except ImportError:
+        print("Installing required packages...")
+        !pip install pandas openpyxl
+        print("Packages installed successfully")
+    """)
+
+    # Convert csv dataset to excel
+    result = codebox.exec(
+        "import pandas as pd\n"
+        "df = pd.read_csv('iris.csv', header=None)\n"
+        "df.to_excel('iris.xlsx', index=False)\n"
+        "'iris.xlsx'"
+    )
+    
+    if result.errors:
+        print("Error:", result.errors[0])
+    else:
+        # List all files to verify conversion
+        for file in codebox.list_files():
+            print(f"File: {file.path} (Size: {file.get_size()} bytes)")
+
+if __name__ == "__main__":
+    main()
 ```
+
+### Result:
+```bash
+File: async_file.txt (Size: 4096 bytes)
+File: data.csv (Size: 4096 bytes)
+File: example.txt (Size: 4096 bytes)
+File: iris.csv (Size: 8192 bytes)
+File: iris.xlsx (Size: 12288 bytes)
+File: script.py (Size: 4096 bytes)
+```
+
+For more details about file handling, see:
+
+- [Data Structures](../concepts/data_structures.md#remotefile)
+- [API Methods](../api/codebox.md#file-operations)
+- [Quick Start Guide](../quickstart.md)

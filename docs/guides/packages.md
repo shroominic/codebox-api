@@ -9,10 +9,10 @@ from codeboxapi import CodeBox
 
 codebox = CodeBox()
 # Install a single package
-codebox.install("pandas")
+nstall("pandas")
 
 # Install multiple packages
-codebox.install("numpy", "matplotlib")
+nstall("numpy", "matplotlib")
 
 # Install specific versions
 codebox.install("requests==2.28.1")

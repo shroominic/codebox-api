@@ -21,20 +21,7 @@ CodeBox is a cloud infrastructure designed to run and test Python code in an iso
 - 🐳 **Docker**: Fully local parallel execution
 - 🏭 **Factories**: Create fully custom environments
 
-## Quick Start
-
-```python
-from codeboxapi import CodeBox
-codebox = CodeBox()
-# Execute Python code
-result = codebox.exec("print('Hello World!')")
-print(result.text)
-# Install packages
-codebox.install("pandas", "numpy")
-# Handle files
-codebox.upload("data.csv", "1,2,3\n4,5,6")
-files = codebox.list_files()
-```
+[Get started with CodeBox →](quickstart.md)
 
 ## Use Cases
 
