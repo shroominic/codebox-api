@@ -5,9 +5,19 @@ For detailed information about async operations, see:
 - [Core Methods](../api/codebox.md#core-methods)
 - [Data Structures](../concepts/data_structures.md)
 
+
 ## Basic Async Operations
+
+Install aiofiles:
+
+```bash
+pip install aiofiles
+```
+Update main.py with the following examples:
+
 ```python
 from codeboxapi import CodeBox
+import asyncio
 
 async def async_examples():
     codebox = CodeBox()
@@ -23,19 +33,57 @@ async def async_examples():
 
     # Async Package Installation
     await codebox.ainstall("requests")
+
+if __name__ == "__main__":
+    asyncio.run(async_examples())
 ```
+
+Then run the example with:
+
+```bash
+python main.py
+```
+
+### Result:
+
+```bash
+Async Hello!
+File content: Async content
+```
+
 Reference: `async_example.py` lines 6-18
 
-## Async Streaming
+
+## Async Streaming:
+
+Update again main.py with the following example:
 ```python
+import asyncio
+from codeboxapi import CodeBox
+
 async def async_stream_exec(cb: CodeBox) -> None:
-    chunks: list[tuple[ExecChunk, float]] = []
-    t0 = time.perf_counter()
-    async for chunk in cb.astream_exec(
-        "import time;\nfor i in range(3): time.sleep(1); print(i)"
-    ):
-        chunks.append((chunk, time.perf_counter() - t0))
-        print(f"{chunks[-1][1]:.5f}: {chunk}")
+    result = await cb.aexec("""
+import time
+import asyncio
+t0 = time.perf_counter()
+for i in range(3):
+    await asyncio.sleep(1)
+    print(f"{time.perf_counter() - t0:.5f}: {i}")
+""")
+    print(f"Complete result:\n{result.text}")
+
+if __name__ == "__main__":
+    codebox = CodeBox(api_key="local")
+    asyncio.run(async_stream_exec(codebox))
+```
+
+### Result:
+
+```bash
+Complete result:
+1.00121: 0
+2.00239: 1
+3.00352: 2
 ```
 Reference: `stream_chunk_timing.py` lines 53-62
 
@@ -45,6 +93,13 @@ Reference: `stream_chunk_timing.py` lines 53-62
 > - Docker must be installed and running (start Docker Desktop or docker daemon)
 > - Port 8069 must be available
 > - User must have permissions to run Docker commands
+
+Install tenacity:
+
+```bash
+pip install tenacity
+```
+Then, update main file:
 
 ```python
 import asyncio
@@ -75,6 +130,13 @@ async def main():
     tasks = [train_model(codebox, i) for i, codebox in enumerate(codeboxes)]
     results = await asyncio.gather(*tasks)
 ```
+
+### Result:
+
+```bash
+[{'split': 0, 'output': 'Score for split 0: 1.0\n', 'errors': []}, {'split': 1, 'output': 'Score for split 1: 1.0\n', 'errors': []}, {'split': 2, 'output': 'Score for split 2: 1.0\n', 'errors': []}]
+```
+
 Reference: `docker_parallel_execution.py` lines 17-80
 
 For more details on async implementations, see:

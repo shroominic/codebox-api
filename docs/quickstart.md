@@ -9,52 +9,14 @@ pip install codeboxapi
 
 This will install the `codeboxapi` package and all dependencies.
 
-For local development without an API key, you will also need to install `jupyter-kernel-gateway`:
+For local development without an API key, you will also need to install:
 
 ```bash
-pip install jupyter-kernel-gateway
-```
+pip install jupyter-kernel-gateway ipython
 
-## Jupyter Setup for Local Development
+pip install matplotlib
 
-After installing `jupyter-kernel-gateway`, you can start using CodeBox locally without an API key. The LocalBox implementation will automatically manage the Jupyter kernel for you.
-
-Note: Make sure you have IPython installed in your environment:
-
-```bash
-pip install ipython
-``` 
-
-## Local Development
-
-CodeBox provides a local execution environment using IPython for development and testing:
-
-```python
-from codeboxapi import CodeBox
-
-# Local execution (no API key needed)
-with CodeBox(api_key="local") as codebox:
-    # Execute Python code
-    result = codebox.exec("print('Hello World!')")
-    print(result.text)
-    # Use matplotlib (automatically handles display)
-    result = codebox.exec("""
-import matplotlib.pyplot as plt
-plt.plot([1, 2, 3], [1, 2, 3])
-plt.show()
-""")
-    # Work with files in local .codebox directory
-    codebox.upload("data.csv", "1,2,3\n4,5,6")
-    files = codebox.list_files()
-    # Install packages locally
-    codebox.install("pandas")
-```
-
-You can also specify a custom working directory:
-
-```python
-with CodeBox(api_key="local", codebox_cwd="./my_workspace") as codebox:
-    codebox.exec("print('Working in custom directory')")
+pip install typing-extensions
 ```
 
 ## API Key Configuration
@@ -67,7 +29,7 @@ codebox = CodeBox(api_key="your-api-key")
 
 Or via environment variable:
 
-```python
+```bash
 export CODEBOX_API_KEY="your-api-key"
 ```
 
@@ -89,3 +51,52 @@ codebox = CodeBox(api_key="docker")
 ```python
 codebox = CodeBox(api_key="your-api-key")
 ```
+
+## Running Your First Example
+
+1. Create a file `main.py`:
+
+```python
+from codeboxapi import CodeBox
+
+def main():
+    codebox = CodeBox(api_key="local")
+    # Basic example
+    result = codebox.exec("print('Hello World!')")
+    print("Basic result:", result.text)
+
+    # Example with matplotlib
+    result = codebox.exec("""
+import matplotlib.pyplot as plt
+plt.plot([1, 2, 3], [1, 2, 3])
+plt.title('Example plot')
+plt.show()
+""")
+    print("Plot generated:", len(result.images) > 0)
+
+    # Example with files
+    codebox.upload("data.csv", "1,2,3\n4,5,6")
+    files = codebox.list_files()
+    print("Files in the directory:", files)
+
+if __name__ == "__main__":
+    main()
+```
+
+2. Run the example:
+```bash
+python main.py
+```
+
+3. You should see:
+```
+Basic result: Hello World!
+
+Plot generated: True
+Files in the directory: [RemoteFile(data.csv, 4096 bytes)]
+```
+
+The example demonstrates:
+- Basic Python code execution
+- Generating plots with matplotlib
+- Handling files in the CodeBox environment
