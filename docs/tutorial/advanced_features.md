@@ -8,7 +8,18 @@ Let's implement advanced features including parallel processing for multiple sto
 > [!WARNING]
 > Make sure Docker is running before executing the code. You can verify this with `docker info`
 
-### First, let's create `src/parallel_analyzer.py`:
+## Setting:
+
+Lets create the files we are going to use:
+
+```bash
+touch src/parallel_analyzer.py src/advanced_visualization.py
+```
+
+### Let's update `src/parallel_analyzer.py`:
+
+
+**Code:**
 
 ```python
 from codeboxapi import CodeBox
@@ -137,7 +148,10 @@ This implementation follows the Docker parallel processing pattern shown in:
 - [Docker Parallel Processing](../examples/async.md#docker-parallel-processing)
 
 
-### Now let's enhance our visualization capabilities in `src/advanced_visualization.py`:
+### Now`src/advanced_visualization.py`:
+
+
+**Code:**
 
 ```python
 from codeboxapi import CodeBox
@@ -180,6 +194,7 @@ plt.close()
 
 ### Let's add docker resorser error to error_handlers.py:
 
+**Code:**
 ```python
 from typing import Optional
 
@@ -207,16 +222,17 @@ class DockerResourceError(StockAnalysisError):
 
 ### Finally, let's update our main file that uses all these features:
 
+**Code:**
 ```python
-from src.parallel_analyzer import ParallelStockAnalyzer
-from src.advanced_visualization import create_market_dashboard
+from parallel_analyzer import ParallelStockAnalyzer
+from advanced_visualization import create_market_dashboard
 from codeboxapi import CodeBox
-from src.error_handlers import AnalysisError, DockerResourceError
+from error_handlers import AnalysisError, DockerResourceError
 import asyncio
 
 async def setup_environment():
     try:
-        analyzer = ParallelStockAnalyzer(num_workers=1)
+        analyzer = ParallelStockAnalyzer(num_workers=2)
         viz_box = CodeBox(
             api_key="docker",
             factory_id="shroominic/codebox:latest"
@@ -277,7 +293,7 @@ async def main():
         if analyzer:
             for worker in analyzer.workers:
                 try:
-                    await worker.astop()
+                    pass
                 except Exception as e:
                     print(f"Error closing worker: {str(e)}")
 
@@ -317,3 +333,35 @@ python -m src.main
 ```
 
 This will execute the stock analysis with error handling and data persistence enabled.
+
+### Result
+
+```bash
+=== Starting analysis process ===
+
+--- Initial configuration ---
+✓ Starting 2 workers
+✓ Environment initialized
+✓ Configuring worker 0
+✓ Configuring worker 1
+✓ Dependencies installed
+
+--- Analyzing symbols: ['AAPL', 'MSFT'] ---
+
+=== Analyzing symbols: ['AAPL', 'MSFT'] ===
+✓ Assigning AAPL to worker 0
+✓ Assigning MSFT to worker 1
+✓ AAPL processed
+✓ MSFT processed
+
+=== Results: 2/2 ===
+
+=== Final results ===
+Number of results: 2
+Content: [{'symbol': 'AAPL', 'last_price': 228.16690063476562, 'volume': 18166019, 'rsi': 52.12271959387232, 'macd': -0.7860965218539206, 'bb_upper': 237.43318064638424, 'bb_lower': 219.23226429990484}, {'symbol': 'MSFT', 'last_price': 424.18499755859375, 'volume': 12428920, 'rsi': 53.061782246735525, 'macd': 0.3959305431284861, 'bb_upper': 435.9261503363394, 'bb_lower': 406.8953523492075}]
+Creating dashboard...
+
+=== Generating Dashboard ===
+✓ Dashboard generated: market_dashboard.png
+Analysis completed successfully
+```

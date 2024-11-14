@@ -32,6 +32,7 @@ nav:
     - Core Functionality: tutorial/core_functionality.md
     - Error Handler: tutorial/error_handler.md
     - Advanced Features: tutorial/advanced_features.md
+    - Conclusion: tutorial/conclusion.md
   - API Reference:
     - CodeBox Class: api/codebox.md
     - Types: api/types.md
