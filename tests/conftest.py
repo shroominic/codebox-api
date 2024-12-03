@@ -1,10 +1,13 @@
 import os
 
 import pytest
+from dotenv import load_dotenv
 
 from codeboxapi import CodeBox
 
 LOCALBOX = CodeBox(api_key="local")
+
+load_dotenv()
 
 
 @pytest.fixture(

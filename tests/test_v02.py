@@ -312,6 +312,27 @@ async def test_async_bash_commands(codebox: CodeBox):
     assert result.text.strip() == "Hello!", "Execution result should be 'Hello!'"
 
 
+def test_file_from_url(codebox: CodeBox):
+    url = "https://raw.githubusercontent.com/shroominic/codebox-api/main/README.md"
+    file_path = "README.md"
+    remote_file = codebox.file_from_url(url, file_path)
+    assert isinstance(remote_file, RemoteFile), "Should return a RemoteFile"
+    assert remote_file.path == file_path, "File path should match"
+    assert len(remote_file.get_content()) > 0, "File should have content"
+    assert file_path in [file.path for file in codebox.list_files()]
+
+
+@pytest.mark.asyncio
+async def test_file_from_url_async(codebox: CodeBox):
+    url = "https://raw.githubusercontent.com/shroominic/codebox-api/main/README.md"
+    file_path = "README.md"
+    remote_file = await codebox.afile_from_url(url, file_path)
+    assert isinstance(remote_file, RemoteFile), "Should return a RemoteFile"
+    assert remote_file.path == file_path, "File path should match"
+    assert len(remote_file.get_content()) > 0, "File should have content"
+    assert file_path in [file.path for file in await codebox.alist_files()]
+
+
 def test_local_box_singleton():
     from codeboxapi.local import LocalBox
 

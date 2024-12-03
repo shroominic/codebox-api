@@ -52,7 +52,8 @@ class CodeBox:
         """
         Creates a CodeBox session
         """
-        api_key = kwargs.get("api_key") or os.getenv("CODEBOX_API_KEY", "local")
+        api_key = kwargs.get("api_key") or os.getenv("CODEBOX_API_KEY")
+        # todo make sure "local" is not hardcoded default
         if api_key == "local":
             return import_module("codeboxapi.local").LocalBox(*args, **kwargs)
 
@@ -175,6 +176,24 @@ class CodeBox:
         )
         return " ".join(packages) + " installed successfully"
 
+    async def afile_from_url(self, url: str, file_path: str) -> "RemoteFile":
+        """
+        Download a file from a URL to the specified destination in the CodeBox.
+        Example:
+        >>> codebox.afile_from_url("https://github.com/org/repo/file.txt", "file.txt")
+        """
+        code = (
+            "import httpx\n"
+            "async with httpx.AsyncClient() as client:\n"
+            f"    async with client.stream('GET', '{url}') as response:\n"
+            "        response.raise_for_status()\n"
+            f"        with open('{file_path}', 'wb') as f:\n"
+            "            async for chunk in response.aiter_bytes():\n"
+            "                f.write(chunk)\n"
+        )
+        await self.aexec(code)
+        return await self.adownload(file_path)
+
     async def alist_files(self) -> list["RemoteFile"]:
         from .types import RemoteFile
 
@@ -245,6 +264,9 @@ class CodeBox:
 
     def install(self, *packages: str) -> str:
         return syncify(self.ainstall)(*packages)
+
+    def file_from_url(self, url: str, file_path: str) -> "RemoteFile":
+        return syncify(self.afile_from_url)(url, file_path)
 
     def list_files(self) -> list["RemoteFile"]:
         return syncify(self.alist_files)()
